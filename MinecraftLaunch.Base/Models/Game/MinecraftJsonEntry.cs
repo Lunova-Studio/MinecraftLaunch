@@ -22,6 +22,7 @@ public record MinecraftJsonEntry {
     [JsonPropertyName("libraries")] public JsonArray Libraries { get; set; }
     [JsonPropertyName("inheritsFrom")] public string InheritsFrom { get; set; }
     [JsonPropertyName("javaVersion")] public JsonNode JavaVersion { get; set; }
+    [JsonPropertyName("releaseTime")] public DateTime ReleaseTime { get; set; }
     [JsonPropertyName("assetIndex")] public AssstIndexJsonEntry AssetIndex { get; set; }
     [JsonPropertyName("minecraftArguments")] public string MinecraftArguments { get; set; }
 }

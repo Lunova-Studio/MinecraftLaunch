@@ -13,6 +13,7 @@ public abstract class MinecraftEntry {
     public required MinecraftVersion Version { get; init; }
 
     public required string ClientJarPath { get; init; }
+    public required DateTime ReleaseTime { get; init; }
     public required string ClientJsonPath { get; init; }
     public required string AssetIndexJsonPath { get; init; }
     public required string MinecraftFolderPath { get; init; }

@@ -170,19 +170,25 @@ public sealed class ArgumentsParser {
 
         foreach (var arg in gameParameters) yield return arg.ReplaceFromDictionary(gameParametersReplace);
 
-
         if (LaunchConfig.Width != 0 && LaunchConfig.Height != 0)
         {
             yield return $"--width {LaunchConfig.Width}";
             yield return $"--height {LaunchConfig.Height}";
         }
 
+        bool isHighVersion = MinecraftEntry.ReleaseTime > new DateTime(2023, 4, 4);
+        if (!string.IsNullOrWhiteSpace(LaunchConfig.SaveName) && isHighVersion)
+            yield return $"--quickPlaySingleplayer {LaunchConfig.SaveName.ToPath()}";
+
         if (LaunchConfig.ServerInfo is not null) {
-            yield return $"--server {LaunchConfig.ServerInfo.Address}";
+            if (isHighVersion) {
+                yield return $"--quickPlayMultiplayer {LaunchConfig.ServerInfo.Address.ToPath()}";
+                yield break;
+            }
+
+            yield return $"--server {LaunchConfig.ServerInfo.Address.ToPath()}";
             yield return $"--port {LaunchConfig.ServerInfo.Port}";
         }
-
-        //foreach (var arg in _extraGameArguments) yield return arg;
     }
 }
 

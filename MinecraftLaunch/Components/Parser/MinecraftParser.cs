@@ -186,6 +186,7 @@ public sealed class MinecraftParser {
             ClientJarPath = clientJarPath,
             Id = partialData.VersionFolderName,
             AssetIndexJsonPath = assetIndexJsonPath,
+            ReleaseTime = gameJsonEntry.ReleaseTime,
             ClientJsonPath = partialData.ClientJsonPath,
             MinecraftFolderPath = partialData.MinecraftFolderPath
         };
@@ -234,6 +235,7 @@ public sealed class MinecraftParser {
         if (hasInheritance) {
             // Use version from the inherited instance
             version = inheritedEntry.Version;
+
         } else {
             // Read from client.json
             string versionId = ReadVersionIdFromNonInheritingClientJson(minecraftJsonEntry, clientJsonNode);
@@ -266,10 +268,15 @@ public sealed class MinecraftParser {
             }
         }
 
+        var releaseTime = hasInheritance
+            ? inheritedEntry.ReleaseTime
+            : minecraftJsonEntry.ReleaseTime;
+
         return new ModifiedMinecraftEntry {
+            ReleaseTime = releaseTime,
             Id = partialData.VersionFolderName,
-            AssetIndexJsonPath = assetIndexJsonPath,
             Version = (MinecraftVersion)version,
+            AssetIndexJsonPath = assetIndexJsonPath,
             MinecraftFolderPath = partialData.MinecraftFolderPath,
             ClientJsonPath = partialData.ClientJsonPath,
             ClientJarPath = clientJarPath,

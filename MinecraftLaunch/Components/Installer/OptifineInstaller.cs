@@ -163,7 +163,7 @@ public sealed class OptifineInstaller : InstallerBase {
         if (!jsonFile.Directory!.Exists)
             jsonFile.Directory.Create();
 
-        var time = DateTime.Now.ToString("s");
+        var time = Minecraft.ReleaseTime.ToString("s");
         var jsonEntry = new OptifineMinecraftEntry {
             Id = entryId,
             InheritsFrom = minecraft.Id,

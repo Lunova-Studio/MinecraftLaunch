@@ -19,10 +19,10 @@ public static class MinecraftEntryExtension {
         }
 
         possiblyAvailableJavas = targetJavaVersion is 0 or -1
-            ? javas.ToList()
+            ? [.. javas]
             : isForgeOrNeoForge
-                ? javas.Where(x => x.MajorVersion.Equals(targetJavaVersion)).ToList()
-                : javas.Where(x => x.MajorVersion >= targetJavaVersion).ToList();
+                ? [.. javas.Where(x => x.MajorVersion.Equals(targetJavaVersion))]
+                : [.. javas.Where(x => x.MajorVersion >= targetJavaVersion)];
 
         if (possiblyAvailableJavas.Count == 0)
             throw new FileNotFoundException($"No suitable version of Java found to start this game, version {targetJavaVersion} is required");

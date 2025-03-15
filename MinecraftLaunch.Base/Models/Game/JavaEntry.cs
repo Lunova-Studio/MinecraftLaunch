@@ -10,6 +10,6 @@ public record JavaEntry {
     public string JavaFolder => Path.GetDirectoryName(JavaPath);
 
     public override string ToString() {
-        return $"{JavaVersion} - {JavaType} - {JavaFolder}";
+        return $"{JavaVersion} - {JavaType} - {JavaPath}";
     }
 }

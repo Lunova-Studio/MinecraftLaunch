@@ -209,9 +209,9 @@ MinecraftParser minecraftParser = @"D:\GamePackage\.minecraft";
 
 #region 本地 Java 读取
 
-//var asyncJavas = JavaUtil.EnumerableJavaAsync();
+var asyncJavas = JavaUtil.EnumerableJavaAsync();
 //await foreach (var java in asyncJavas)
-//    Console.WriteLine($"是否是64位：{java.Is64bit} - Java 版本：{java.JavaVersion} - Java 类型：{java.JavaType} - Java 路径：{java.JavaPath}");
+//    Console.WriteLine(java);
 
 #endregion
 
@@ -228,22 +228,20 @@ MinecraftParser minecraftParser = @"D:\GamePackage\.minecraft";
 
 #region 启动
 
-//var minecraft = minecraftParser.GetMinecraft("1.14.4");
-//MinecraftRunner runner = new(new LaunchConfig {
-//    Account = new OfflineAuthenticator().Authenticate("Yang114"),
-//    MaxMemorySize = 2048,
-//    MinMemorySize = 512,
-//    LauncherName = "MinecraftLaunch",
-//    JavaPath = minecraft.GetAppropriateJava(javas),
-//    ServerInfo = new ServerInfo {
-//        Address = "mc.hypixel.net"
-//    }
-//}, minecraftParser);
+var minecraft = minecraftParser.GetMinecraft("1.20.1-OptiFine_I6");
+MinecraftRunner runner = new(new LaunchConfig {
+    Account = new OfflineAuthenticator().Authenticate("Yang114"),
+    MaxMemorySize = 2048,
+    MinMemorySize = 512,
+    LauncherName = "MinecraftLaunch",
+    SaveName = "新的世界",
+    JavaPath = minecraft.GetAppropriateJava(await asyncJavas.ToListAsync()),
+}, minecraftParser);
 
-//var process = await runner.RunAsync(minecraft);
+var process = await runner.RunAsync(minecraft);
 
-//process.Started += (_, _) => Console.WriteLine("Launch successful!");
-//process.OutputLogReceived += (_, arg) => Console.WriteLine(arg.Data);
+process.Started += (_, _) => Console.WriteLine("Launch successful!");
+process.OutputLogReceived += (_, arg) => Console.WriteLine(arg.Data);
 
 #endregion
 
