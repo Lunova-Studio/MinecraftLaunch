@@ -51,13 +51,13 @@
 
 MinecraftLaunch作为 NuGet 包发布，你可以在任意 NuGet 包管理器安装到你的项目里或使用命令行安装：
 
-```
+```bash
 dotnet add package MinecraftLaunch
 ```
 
 你可以通过以下命令安装旧版本MinecraftLaunch：
 
-```
+```bash
 dotnet add package MinecraftLaunch --version 3.0.0
 ```
 
