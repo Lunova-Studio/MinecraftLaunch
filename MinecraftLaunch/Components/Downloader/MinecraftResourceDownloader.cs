@@ -28,7 +28,8 @@ public sealed class MinecraftResourceDownloader {
         _downloader = new(maxThread);
     }
 
-    public async Task<GroupDownloadResult> VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default) {
+    public async Task<GroupDownloadResult> VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default)
+    {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileVerificationParallelism);
 
         #region 1.1 Libraries & Inherited Libraries
@@ -39,7 +40,8 @@ public sealed class MinecraftResourceDownloader {
 
         if (AllowInheritedDependencies
             && _entry is ModifiedMinecraftEntry modInstance
-            && modInstance.HasInheritance) {
+            && modInstance.HasInheritance)
+        {
             (libs, nativeLibs) = modInstance.InheritedMinecraft.GetRequiredLibraries();
             _dependencies.AddRange(libs);
             _dependencies.AddRange(nativeLibs);
@@ -50,7 +52,8 @@ public sealed class MinecraftResourceDownloader {
         #region 1.2 Client.jar
 
         var jar = _entry.GetJarElement();
-        if (jar != null) {
+        if (jar != null)
+        {
             _dependencies.Add(jar);
         }
 
@@ -58,74 +61,91 @@ public sealed class MinecraftResourceDownloader {
 
         #region 1.3 AssetIndex & Assets
 
-        if (AllowVerifyAssets) {
+        if (AllowVerifyAssets)
+        {
             var assetIndex = _entry.GetAssetIndex();
 
-            if (!VerifyDependency(assetIndex, cancellationToken)) {
+            // 验证 AssetIndex 文件
+            if (!VerifyDependency(assetIndex, cancellationToken))
+            {
                 var result = await _downloader
                     .DownloadFileAsync(new(assetIndex.Url, assetIndex.FullPath), cancellationToken);
 
-                if (result.Type == DownloadResultType.Failed) {
+                if (result.Type == DownloadResultType.Failed)
+                {
                     throw new Exception("Failed to obtain the dependent material index file");
                 }
             }
 
+            // 添加资源文件到依赖列表
             _dependencies.AddRange(_entry.GetRequiredAssets());
         }
 
         #endregion
 
-        // 2. Verify dependencies
-        SemaphoreSlim semaphore = new(fileVerificationParallelism, fileVerificationParallelism);
-        ConcurrentBag<MinecraftDependency> invalidDeps = [];
+        // 2. 验证依赖项
+        ConcurrentBag<MinecraftDependency> invalidDeps = new();
+        Parallel.ForEach(_dependencies, new ParallelOptions { MaxDegreeOfParallelism = fileVerificationParallelism }, dep => {
+            if (!VerifyDependency(dep, cancellationToken))
+            {
+                invalidDeps.Add(dep);
+            }
+        });
 
-        _dependencies.AsParallel()
-            .Where(x => {
-                if (!VerifyDependency(x, cancellationToken)) {
-                    return true;
-                }
-
-                return false;
-            })
-            .ForAll(invalidDeps.Add);
-
-        //var tasks = _dependencies.Select(async dep => {
-        //    await semaphore.WaitAsync(cancellationToken);
-        //    try {
-        //        if (!await VerifyDependency(dep, cancellationToken)) {
-        //            lock (invalidDeps) {
-        //                invalidDeps.Add(dep);
-        //            }
-        //        }
-        //    } finally {
-        //        semaphore.Release();
-        //    }
-        //}).ToList();
-
-        //await Task.WhenAll(tasks);
-
-        // 3. Download invalid dependencies
+        // 3. 下载无效的依赖项
         TotalCount = invalidDeps.Count;
-        var downloadItems = invalidDeps.Where(dep => dep is IDownloadDependency)
+        var downloadItems = invalidDeps
             .OfType<IDownloadDependency>()
-            .Select(dep => new DownloadRequest(dep.Url, dep.FullPath));
+            .Select(dep => new DownloadRequest(dep.Url, dep.FullPath))
+            .ToList();
 
         int currentCount = 0;
-        double speed = default;
-        int totalCount = downloadItems.Count();
+        double speed = 0;
+        int totalCount = downloadItems.Count;
+
         var groupRequest = new GroupDownloadRequest(downloadItems);
         groupRequest.DownloadSpeedChanged += arg => speed = arg;
 
         groupRequest.SingleRequestCompleted += (request, result) => {
             Interlocked.Increment(ref currentCount);
-            ProgressChanged?.Invoke(this, new ResourceDownloadProgressChangedEventArgs {
+            ProgressChanged?.Invoke(this, new ResourceDownloadProgressChangedEventArgs
+            {
                 Speed = speed,
                 TotalCount = totalCount,
                 CompletedCount = currentCount,
             });
         };
 
-        return await _downloader.DownloadFilesAsync(groupRequest, cancellationToken);
+        // 增加下载失败的重试机制
+        GroupDownloadResult downloadResult = await _downloader.DownloadFilesAsync(groupRequest, cancellationToken);
+        if (downloadResult.Type == DownloadResultType.Failed && downloadResult.Failed.Count > 0)
+        {
+            var failedItems = downloadResult.Failed.Keys
+                .Select(req => new DownloadRequest(req.Url, req.FileInfo.FullName))
+                .ToList();
+
+            var retryRequest = new GroupDownloadRequest(failedItems);
+            retryRequest.DownloadSpeedChanged += arg => speed = arg;
+
+            retryRequest.SingleRequestCompleted += (request, result) => {
+                Interlocked.Increment(ref currentCount);
+                ProgressChanged?.Invoke(this, new ResourceDownloadProgressChangedEventArgs
+                {
+                    Speed = speed,
+                    TotalCount = totalCount,
+                    CompletedCount = currentCount,
+                });
+            };
+
+            // 重试下载失败的文件
+            var retryResult = await _downloader.DownloadFilesAsync(retryRequest, cancellationToken);
+            if (retryResult.Type == DownloadResultType.Failed)
+            {
+                throw new Exception("Some dependencies failed to download after retrying.");
+            }
+        }
+
+        return downloadResult;
     }
 
     #region Privates
