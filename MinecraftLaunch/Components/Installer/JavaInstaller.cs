@@ -12,137 +12,128 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Runtime.InteropServices;
+using MinecraftLaunch.Base.EventArgs;
 
 namespace MinecraftLaunch.Components.Installer;
 
 /// <summary>
-/// Java 通用安装器
+/// 跨平台 Java 安装器
 /// </summary>
-public sealed class JavaInstaller : InstallerBase
-{
-    public string JavaVersion { get; init; }
-    public string InstallPath { get; init; }
-    public override string MinecraftFolder { get; init; }
+public sealed class JavaInstaller{
+    public string JavaFolder { get; init; }
+    public  string MinecraftFolder { get; init; }
 
-    public static JavaInstaller Create(string installPath, string javaVersion, string minecraftFolder)
-    {
-        return new JavaInstaller
-        {
-            JavaVersion = javaVersion,
-            InstallPath = installPath,
-            MinecraftFolder = minecraftFolder
+    public event EventHandler<EventArgs> Completed;
+    public event EventHandler<InstallProgressChangedEventArgs> ProgressChanged;
+
+    void ReportCompleted() {
+        Completed?.Invoke(this, EventArgs.Empty);
+    }
+
+    void ReportProgress(InstallStep step, double progress, TaskStatus status, int totalCount, int finshedCount, double speed = -1d, bool isSupportStep = false) {
+        ProgressChanged?.Invoke(this, new InstallProgressChangedEventArgs {
+            Speed = speed,
+            Status = status,
+            StepName = step,
+            Progress = progress,
+            TotalStepTaskCount = totalCount,
+            IsStepSupportSpeed = isSupportStep,
+            FinishedStepTaskCount = finshedCount
+        });
+    }
+
+    public static JavaInstaller Create(string javaFolder) {
+        return new JavaInstaller {
+            JavaFolder = javaFolder,
         };
     }
 
     /// <summary>
-    /// 异步安装 Java 环境。
-    /// 警告：该函数因不是安装 Minecraft 内容，因此将不会返回 MinecraftEntry 对象。
+    /// 异步安装
     /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns>NULL</returns>
-    /// 
-    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default)
-    {
-        FileInfo javaPackageFile = default;
-
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    
+    public  async Task InstallAsync(CancellationToken cancellationToken = default) {
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
+        // 先汇报进度，避免 UI 卡死
+        try {
+            var javaInfo = await FetchJavaInfoAsync(cancellationToken); // 获取 Java 信息
+            var javaFile = await DownloadJavaAsync(javaInfo, cancellationToken); // 异步下载
+            await ExtractJavaAsync(javaFile, cancellationToken); // 异步解压缩
 
-        try
-        {
-            javaPackageFile = await DownloadJavaPackageAsync(cancellationToken);
-            await ExtractJavaPackageAsync(javaPackageFile, cancellationToken);
-            ValidateJavaInstallation();
-
-            ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);
-            ReportCompleted();
-        }
-        catch (Exception)
-        {
+            ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);// 完成
+            ReportCompleted(); // 汇报完成
+        } catch (Exception ex) {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted();
-            throw;
+            throw new InvalidOperationException("Java 安装失败", ex);
         }
-
-        return null; // JavaInstaller 不返回 MinecraftEntry
     }
 
-    #region Privates
-
     /// <summary>
-    /// 下载 Java 安装包。
+    /// 获取 Java 信息
     /// </summary>
-    private async Task<FileInfo> DownloadJavaPackageAsync(CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        ReportProgress(InstallStep.DownloadPackage, 0.10d, TaskStatus.Running, 1, 0);
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    private async Task<JsonNode> FetchJavaInfoAsync(CancellationToken cancellationToken) {
+        ReportProgress(InstallStep.FetchingMetadata, 0.1d, TaskStatus.Running, 1, 0);
 
-        string packageUrl = $"https://api.adoptopenjdk.net/v3/binary/latest/{JavaVersion}/ga/windows/x64/jdk/hotspot/normal/adoptopenjdk";
-        string fileName = $"java-{JavaVersion}.zip";
-        var packageFile = new FileInfo(Path.Combine(InstallPath, fileName));
+        string url = "https://launchermeta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json";
+        string json = await url.GetStringAsync(cancellationToken: cancellationToken); // 获取 Java 元数据
 
-        var downloadRequest = new DownloadRequest(packageUrl, packageFile.FullName);
+        string platformKey = GetPlatformKey(); // 获取平台
+        var javaInfo = JsonNode.Parse(json)?[platformKey]?["java-runtime-gamma"]?.AsArray()
+            ?? throw new InvalidOperationException($"无法获取 Java 元数据，平台：{platformKey}"); // 意思：解析Json内容，如果不是数组就报错
+        if (javaInfo == null) {
+            throw new InvalidOperationException($"无法获取 Java 元数据，平台：{platformKey}");
+        }
+        ReportProgress(InstallStep.FetchingMetadata, 0.2d, TaskStatus.Running, 1, 1); // 汇报进度
+        return javaInfo;
+
+    }
+
+    private async Task<FileInfo> DownloadJavaAsync(JsonNode javaInfo, CancellationToken cancellationToken) {
+        ReportProgress(InstallStep.DownloadPackage, 0.3d, TaskStatus.Running, 1, 0); // 汇报进度
+
+        string javaUrl = javaInfo [0] ["manifest"]?["url"]?.ToString() // [0] 代表第一个元素，[""manifest"] 代表 manifest 属性
+            ?? javaInfo[0]["url"]?.ToString() // ["url"] 代表 url 属性
+            ?? throw new InvalidOperationException("无法解析 Java manifest 下载地址"); // 意思：如果没有这个地址就报错
+
+        string fileName = Path.Combine(JavaFolder, "java-runtime-filelist.json"); // 拼接路径
+        var downloadRequest = new DownloadRequest(javaUrl, fileName); // 创建下载请求
+
         await new FileDownloader(DownloadMirrorManager.MaxThread)
-            .DownloadFileAsync(downloadRequest, cancellationToken);
+            .DownloadFileAsync(downloadRequest, cancellationToken); // 异步下载 manifest
 
-        ReportProgress(InstallStep.DownloadPackage, 0.30d, TaskStatus.Running, 1, 1);
-        return packageFile;
+        ReportProgress(InstallStep.DownloadPackage, 0.6d, TaskStatus.Running, 1, 1); // 汇报进度
+        return new FileInfo(fileName);
     }
 
-    /// <summary>
-    /// 解压 Java 安装包。
-    /// </summary>
-    private async Task ExtractJavaPackageAsync(FileInfo javaPackageFile, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        ReportProgress(InstallStep.ParsePackage, 0.30d, TaskStatus.Running, 1, 0);
+    private async Task ExtractJavaAsync(FileInfo javaFile, CancellationToken cancellationToken) {
+        ReportProgress(InstallStep.ExtractingFiles, 0.7d, TaskStatus.Running, 1, 0); // 汇报进度
 
-        string extractPath = Path.Combine(InstallPath, $"java-{JavaVersion}");
-        if (Directory.Exists(extractPath))
-        {
-            Directory.Delete(extractPath, true);
+        string extractPath = Path.Combine(JavaFolder, "runtime");
+        if (!Directory.Exists(extractPath)) {
+            Directory.CreateDirectory(extractPath);
         }
 
-        await Task.Run(() => {
-            ZipFile.ExtractToDirectory(javaPackageFile.FullName, extractPath);
-        }, cancellationToken);
+        await Task.Run(() => ZipFile.ExtractToDirectory(javaFile.FullName, extractPath, true), cancellationToken);
 
-        ReportProgress(InstallStep.ParsePackage, 0.60d, TaskStatus.Running, 1, 1);
+        ReportProgress(InstallStep.ExtractingFiles, 0.9d, TaskStatus.Running, 1, 1);
     }
 
-    /// <summary>
-    /// 验证 Java 安装是否成功。
-    /// </summary>
-    private void ValidateJavaInstallation()
-    {
-        ReportProgress(InstallStep.RunInstallProcessor, 0.60d, TaskStatus.Running, 1, 0);
-
-        string javaExecutable = Path.Combine(InstallPath, $"java-{JavaVersion}", "bin", "java.exe");
-        if (!File.Exists(javaExecutable))
-        {
-            throw new FileNotFoundException("Java executable not found after installation.");
+    private string GetPlatformKey() {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            return RuntimeInformation.OSArchitecture == Architecture.X64 ? "windows-x64" : "windows-x86";
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+            return "linux";
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            return "mac-os";
+        } else {
+            throw new PlatformNotSupportedException("不支持的操作系统平台");
         }
-
-        var process = Process.Start(new ProcessStartInfo(javaExecutable)
-        {
-            Arguments = "-version",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        });
-
-        if (process == null)
-        {
-            throw new Exception("Failed to start Java process for validation.");
-        }
-
-        process.WaitForExit();
-        if (process.ExitCode != 0)
-        {
-            throw new Exception("Java installation validation failed.");
-        }
-
-        ReportProgress(InstallStep.RunInstallProcessor, 1.0d, TaskStatus.RanToCompletion, 1, 1);
     }
-
-    #endregion
 }

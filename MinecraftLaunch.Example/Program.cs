@@ -229,20 +229,20 @@ var asyncJavas = JavaUtil.EnumerableJavaAsync();
 
 #region 启动
 
-var minecraft = minecraftParser.GetMinecraft("1.20.1-OptiFine_I6");
-MinecraftRunner runner = new(new LaunchConfig {
-    Account = new OfflineAuthenticator().Authenticate("Yang114"),
-    MaxMemorySize = 2048,
-    MinMemorySize = 512,
-    LauncherName = "MinecraftLaunch",
-    SaveName = "新的世界",
-    JavaPath = minecraft.GetAppropriateJava(await asyncJavas.ToListAsync()),
-}, minecraftParser);
+//var minecraft = minecraftParser.GetMinecraft("1.20.1-OptiFine_I6");
+//MinecraftRunner runner = new(new LaunchConfig {
+//    Account = new OfflineAuthenticator().Authenticate("Yang114"),
+//    MaxMemorySize = 2048,
+//    MinMemorySize = 512,
+//    LauncherName = "MinecraftLaunch",
+//    SaveName = "新的世界",
+//    JavaPath = minecraft.GetAppropriateJava(await asyncJavas.ToListAsync()),
+//}, minecraftParser);
 
-var process = await runner.RunAsync(minecraft);
+//var process = await runner.RunAsync(minecraft);
 
-process.Started += (_, _) => Console.WriteLine("Launch successful!");
-process.OutputLogReceived += (_, arg) => Console.WriteLine(arg.Data);
+//process.Started += (_, _) => Console.WriteLine("Launch successful!");
+//process.OutputLogReceived += (_, arg) => Console.WriteLine(arg.Data);
 
 #endregion
 
@@ -257,12 +257,8 @@ process.OutputLogReceived += (_, arg) => Console.WriteLine(arg.Data);
 #endregion
 
 #region Java 安装器
-// var javaInstaller = JavaInstaller.Create("./Java", "17", "./Minecraft");
-// await javaInstaller.InstallAsync();
-
-// var javaInstaller = JavaInstaller.Create("./Java", "17", "./Minecraft");
-// javaInstaller.ProgressChanged += (_, arg) =>
-//    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{FileDownloader.GetSpeedText(arg.Speed)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
+var javaInstaller = JavaInstaller.Create("./Java");
+await javaInstaller.InstallAsync();
 #endregion
 
 Console.WriteLine("Done!");
