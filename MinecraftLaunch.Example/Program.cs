@@ -2,6 +2,7 @@
 using Flurl.Http.Configuration;
 using MinecraftLaunch;
 using MinecraftLaunch.Base.Enums;
+using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Components.Authenticator;
 using MinecraftLaunch.Components.Downloader;
@@ -264,6 +265,11 @@ var asyncJavas = JavaUtil.EnumerableJavaAsync();
 //    Console.WriteLine(item);
 //}
 
+#endregion
+
+#region Java 安装器
+var javaInstaller = JavaInstaller.Create("./Java");
+await javaInstaller.InstallAsync();
 #endregion
 
 Console.WriteLine("Done!");

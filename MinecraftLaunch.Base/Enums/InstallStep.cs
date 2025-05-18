@@ -28,6 +28,11 @@ public enum InstallStep {
     InstallPrimaryModLoader,
     InstallSecondaryModLoader,
 
+    //Java
+    FetchingMetadata,
+    DownloadJava,
+    ExtractingFiles,
+
     //Error handle
     Interrupted = -1,
 
