@@ -92,7 +92,6 @@ public sealed class JavaInstaller{
         }
         ReportProgress(InstallStep.FetchingMetadata, 0.2d, TaskStatus.Running, 1, 1); // 汇报进度
         return javaInfo;
-
     }
 
     private async Task<FileInfo> DownloadJavaAsync(JsonNode javaInfo, CancellationToken cancellationToken) {
