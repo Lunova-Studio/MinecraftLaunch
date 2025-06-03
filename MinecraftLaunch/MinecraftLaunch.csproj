@@ -4,15 +4,15 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<PackageProjectUrl>https://github.com/Blessing-Studio/MinecraftLaunch</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/Blessing-Studio/MinecraftLaunch</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/Lunova-Studio/MinecraftLaunch</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/Lunova-Studio/MinecraftLaunch</RepositoryUrl>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Description>下一代全能高效化的 Minecraft 启动核心</Description>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Authors>Blessing-Studio</Authors>
+		<Authors>Lunova-Studio</Authors>
 		<LangVersion>latest</LangVersion>
 		<Title>MinecraftLaunch</Title>
 		<Nullable>disable</Nullable>
