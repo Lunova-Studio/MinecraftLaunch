@@ -27,17 +27,14 @@ public sealed class FabricInstaller : InstallerBase {
         };
     }
 
-    public static async IAsyncEnumerable<FabricInstallEntry> EnumerableFabricAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<FabricInstallEntry>> EnumerableFabricAsync(string mcVersion, CancellationToken cancellationToken = default) {
         string json = await HttpUtil.FlurlClient.Request($"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}")
             .GetStringAsync(cancellationToken: cancellationToken);
 
         var entries = json.Deserialize(FabricInstallEntryContext.Default.IEnumerableFabricInstallEntry)
             .OrderByDescending(x => new Version(x.Loader.Version.Replace(x.Loader.Separator, ".")));
-        
-        foreach (var entry in entries) {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return entry;
-        }
+
+        return entries;
     }
 
     public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
@@ -107,13 +104,6 @@ public sealed class FabricInstaller : InstallerBase {
         return jsonFile;
     }
 
-    private ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
-        cancellationToken.ThrowIfCancellationRequested();
-        var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
-
-        return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
-    }
-
     private async Task CompleteFabricLibrariesAsync(MinecraftEntry minecraft, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
@@ -130,6 +120,13 @@ public sealed class FabricInstaller : InstallerBase {
 
         if (groupDownloadResult.Failed.Count > 0)
             throw new InvalidOperationException("Some dependent files encountered errors during download");
+    }
+
+    private static ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
+        var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
+
+        return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }
 
     #endregion

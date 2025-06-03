@@ -1,4 +1,5 @@
 ﻿using MinecraftLaunch.Base.Interfaces;
+using System.Collections.Frozen;
 
 namespace MinecraftLaunch;
 
@@ -10,7 +11,7 @@ public static class DownloadMirrorManager {
 }
 
 public sealed class BmclApiSource : IDownloadMirror {
-    private static readonly Dictionary<string, string> _replacementMap = new() {
+    private static readonly FrozenDictionary<string, string> _replacementMap = new Dictionary<string, string> {
         { "https://resources.download.minecraft.net", "https://bmclapi2.bangbang93.com/assets" },
         { "https://piston-meta.mojang.com", "https://bmclapi2.bangbang93.com" },
         { "https://launchermeta.mojang.com", "https://bmclapi2.bangbang93.com" },
@@ -21,17 +22,15 @@ public sealed class BmclApiSource : IDownloadMirror {
         { "https://maven.fabricmc.net", "https://bmclapi2.bangbang93.com/maven" },
         { "https://meta.fabricmc.net", "https://bmclapi2.bangbang93.com/fabric-meta" },
         { "https://maven.neoforged.net/releases/net/neoforged/forge", "https://bmclapi2.bangbang93.com/maven/net/neoforged/forge" }
-    };
+    }.ToFrozenDictionary();
 
     public string TryFindUrl(string sourceUrl) {
-        if (!DownloadMirrorManager.IsEnableMirror) {
+        if (!DownloadMirrorManager.IsEnableMirror)
             return sourceUrl;
-        }
 
-        foreach (var (src, mirror) in _replacementMap) {
+        foreach (var (src, mirror) in _replacementMap)
             if (sourceUrl.StartsWith(src))
                 return sourceUrl.Replace(src, mirror);
-        }
 
         return sourceUrl;
     }

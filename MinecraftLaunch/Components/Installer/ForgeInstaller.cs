@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Transactions;
 
 namespace MinecraftLaunch.Components.Installer;
 
@@ -65,7 +66,7 @@ public sealed class ForgeInstaller : InstallerBase {
         return entry ?? throw new ArgumentNullException(nameof(entry), "Unexpected null reference to variable");
     }
 
-    public static async IAsyncEnumerable<ForgeInstallEntry> EnumerableForgeAsync(string mcVersion, bool isNeoforge = false, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<ForgeInstallEntry>> EnumerableForgeAsync(string mcVersion, bool isNeoforge = false, CancellationToken cancellationToken = default) {
         var packagesUrl = isNeoforge
             ? $"https://bmclapi2.bangbang93.com/neoforge/list/{mcVersion}"
             : $"https://bmclapi2.bangbang93.com/forge/minecraft/{mcVersion}";
@@ -74,12 +75,10 @@ public sealed class ForgeInstaller : InstallerBase {
         var entries = json.Deserialize(ForgeInstallEntryContext.Default.IEnumerableForgeInstallEntry)
             .OrderByDescending(entry => entry.Build);
 
-        foreach (var package in entries) {
-            cancellationToken.ThrowIfCancellationRequested();
+        foreach (var entry in entries)
+            entry.IsNeoforge = isNeoforge;
 
-            package.IsNeoforge = isNeoforge;
-            yield return package;
-        }
+        return entries;
     }
 
     #region Privates
@@ -182,13 +181,6 @@ public sealed class ForgeInstaller : InstallerBase {
 
         ReportProgress(InstallStep.WriteVersionJsonAndSomeDependencies, 0.60d, TaskStatus.Running, 1, 1);
         return jsonFile;
-    }
-
-    private ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
-        cancellationToken.ThrowIfCancellationRequested();
-        var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
-
-        return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }
 
     private async Task CompleteForgeDependenciesAsync(bool isLegacyForgeVersion, JsonNode installProfile, MinecraftEntry minecraft, CancellationToken cancellationToken) {
@@ -339,6 +331,13 @@ public sealed class ForgeInstaller : InstallerBase {
             ReportProgress(InstallStep.RunInstallProcessor, ((double)count / (double)totalCount).ToPercentage(0.75d, 0.95d),
                  TaskStatus.Running, totalCount, Interlocked.Increment(ref count));
         }
+    }
+
+    private static ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
+        var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
+
+        return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }
 
     #endregion

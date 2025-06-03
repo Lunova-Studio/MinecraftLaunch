@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MinecraftLaunch.Base.Models.Authentication;
+namespace MinecraftLaunch.Base.Models.Authentication.Microsoft;
 
-public sealed record DeviceCodeResponse {
+public record DeviceCodeResponse {
     [JsonPropertyName("interval")] public int Interval { get; set; }
     [JsonPropertyName("message")] public string Message { get; set; }
     [JsonPropertyName("expires_in")] public int ExpiresIn { get; set; }

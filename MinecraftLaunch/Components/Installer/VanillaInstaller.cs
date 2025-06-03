@@ -21,17 +21,15 @@ public sealed class VanillaInstaller : InstallerBase {
         };
     }
 
-    public static async IAsyncEnumerable<VersionManifestEntry> EnumerableMinecraftAsync([EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<VersionManifestEntry>> EnumerableMinecraftAsync(CancellationToken cancellationToken = default) {
         var url = DownloadMirrorManager.BmclApi
             .TryFindUrl("https://launchermeta.mojang.com/mc/game/version_manifest.json");
 
         var node = (await url.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken))
             .AsNode();
 
-        foreach (var entry in node.GetEnumerable("versions").Deserialize(VersionManifestEntryContext.Default.IEnumerableVersionManifestEntry)) {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return entry;
-        }
+        var entries = node.GetEnumerable("versions").Deserialize(VersionManifestEntryContext.Default.IEnumerableVersionManifestEntry);
+        return entries;
     }
 
     public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
@@ -102,11 +100,11 @@ public sealed class VanillaInstaller : InstallerBase {
 
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
         var resourceDownloader = new MinecraftResourceDownloader(entry, DownloadMirrorManager.MaxThread);
-        
+
         int count = 0;
         resourceDownloader.ProgressChanged += (_, x)
             => ReportProgress(InstallStep.DownloadLibraries, x.ToPercentage().ToPercentage(0.5d, 0.95d),
-                TaskStatus.Running, resourceDownloader.TotalCount, 
+                TaskStatus.Running, resourceDownloader.TotalCount,
                     Interlocked.Increment(ref count), x.Speed, true);
 
         var groupDownloadResult = await resourceDownloader.VerifyAndDownloadDependenciesAsync(cancellationToken: cancellationToken);

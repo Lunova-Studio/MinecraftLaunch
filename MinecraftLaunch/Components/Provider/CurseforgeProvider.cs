@@ -5,6 +5,7 @@ using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -25,13 +26,12 @@ public sealed class CurseforgeProvider {
         return new(apiKey);
     }
 
-    public async IAsyncEnumerable<CurseforgeResource> GetFeaturedResourcesAsync([EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<CurseforgeResource>> GetFeaturedResourcesAsync(CancellationToken cancellationToken = default) {
         var request = CreateRequest("mods", "featured");
-        var payload = new CurseforgeFeaturedRequestPayload(432, [0])
-            .Serialize(CurseforgeFeaturedRequestPayloadContext.Default.CurseforgeFeaturedRequestPayload);
+        var payload = new CurseforgeFeaturedRequestPayload(432, [0]);
 
-        using var responseMessage = await request.PostAsync(new StringContent(payload,
-            new MediaTypeHeaderValue("application/json")),
+        using var responseMessage = await request.PostAsync(JsonContent.Create(payload,
+            CurseforgeFeaturedRequestPayloadContext.Default.CurseforgeFeaturedRequestPayload),
                 cancellationToken: cancellationToken);
 
         var jsonNode = (await responseMessage.GetStringAsync())
@@ -45,13 +45,12 @@ public sealed class CurseforgeProvider {
         if (popular is not null && featured is not null)
             resources = popular.Union(featured);
         else
-            yield break;
+            return [];
 
-        foreach (var resource in resources)
-            yield return Parse(resource);
+        return resources.Select(Parse);
     }
 
-    public async IAsyncEnumerable<CurseforgeResource> SearchResourcesAsync(
+    public async Task<IEnumerable<CurseforgeResource>> SearchResourcesAsync(
         string searchFilter,
         int classId = 6,
         int category = 0,
@@ -76,10 +75,9 @@ public sealed class CurseforgeProvider {
         var jsonNode = json.AsNode();
 
         if (jsonNode == null)
-            yield break;
+            return [];
 
-        foreach (var resourceNode in jsonNode.GetEnumerable("data"))
-            yield return Parse(resourceNode);
+        return jsonNode.GetEnumerable("data").Select(Parse);
     }
 
     #region Private and internals

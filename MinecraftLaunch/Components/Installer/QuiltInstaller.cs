@@ -5,6 +5,7 @@ using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Components.Downloader;
 using MinecraftLaunch.Components.Parser;
 using MinecraftLaunch.Extensions;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -26,15 +27,12 @@ public sealed class QuiltInstaller : InstallerBase {
         };
     }
 
-    public static async IAsyncEnumerable<QuiltInstallEntry> EnumerableQuiltAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<QuiltInstallEntry>> EnumerableQuiltAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         string json = await $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}"
             .GetStringAsync(cancellationToken: cancellationToken);
 
         var entries = json.Deserialize(QuiltInstallEntryContext.Default.IEnumerableQuiltInstallEntry);
-        foreach (var entry in entries) {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return entry;
-        }
+        return entries;
     }
 
     public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {

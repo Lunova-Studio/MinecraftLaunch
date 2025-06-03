@@ -36,17 +36,14 @@ public sealed class OptifineInstaller : InstallerBase {
         };
     }
 
-    public static async IAsyncEnumerable<OptifineInstallEntry> EnumerableOptifineAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<OptifineInstallEntry>> EnumerableOptifineAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         string url = $"https://bmclapi2.bangbang93.com/optifine/{mcVersion}";
 
         string json = await url.GetStringAsync(cancellationToken: cancellationToken);
         var entries = json.Deserialize(OptifineInstallEntryContext.Default.IEnumerableOptifineInstallEntry)
             .OrderByDescending(entry => entry.Patch);
 
-        foreach (var item in entries) {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return item;
-        }
+        return entries;
     }
 
     public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {

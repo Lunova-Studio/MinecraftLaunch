@@ -26,17 +26,17 @@ public sealed class ModrinthModpackInstaller : InstallerBase {
 
     public static async Task<IInstallEntry> ParseModLoaderEntryAsync(ModrinthModpackInstallEntry modpack, CancellationToken cancellationToken = default) {
         if (modpack.Dependencies.ContainsKey("fabric-loader"))
-            return await FabricInstaller.EnumerableFabricAsync(modpack.McVersion, cancellationToken: cancellationToken)
-                .FirstOrDefaultAsync(x => x.BuildVersion.Equals(modpack.Dependencies["fabric-loader"]), cancellationToken);
+            return (await FabricInstaller.EnumerableFabricAsync(modpack.McVersion, cancellationToken: cancellationToken))
+                .First(x => x.BuildVersion.Equals(modpack.Dependencies["fabric-loader"]));
         else if (modpack.Dependencies.ContainsKey("quilt-loader"))
-            return await QuiltInstaller.EnumerableQuiltAsync(modpack.McVersion, cancellationToken)
-                .FirstOrDefaultAsync(x => x.BuildVersion.Equals(modpack.Dependencies["quilt-loader"]), cancellationToken);
+            return (await QuiltInstaller.EnumerableQuiltAsync(modpack.McVersion, cancellationToken))
+                .First(x => x.BuildVersion.Equals(modpack.Dependencies["quilt-loader"]));
         else if (modpack.Dependencies.ContainsKey("forge"))
-            return await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, false, cancellationToken)
-                .FirstOrDefaultAsync(x => x.ForgeVersion.Equals(modpack.Dependencies["forge"]));
+            return (await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, false, cancellationToken))
+                .First(x => x.ForgeVersion.Equals(modpack.Dependencies["forge"]));
         else if (modpack.Dependencies.ContainsKey("neoforge"))
-            return await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, true, cancellationToken)
-                .FirstOrDefaultAsync(x => x.ForgeVersion.Equals(modpack.Dependencies["neoforge"]));
+            return (await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, true, cancellationToken))
+                .First(x => x.ForgeVersion.Equals(modpack.Dependencies["neoforge"]));
         else
             throw new NotSupportedException();
     }

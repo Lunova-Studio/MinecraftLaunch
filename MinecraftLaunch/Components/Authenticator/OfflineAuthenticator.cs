@@ -105,7 +105,6 @@ public unsafe struct Uuid {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     private void FormatN(char* dest) {
-        // dddddddddddddddddddddddddddddddd
         if (Avx2.IsSupported) {
             fixed (Uuid* thisPtr = &this) {
                 Vector256<short> uuidVector = Avx2.ConvertToVector256Int16(Sse3.LoadDquVector128((byte*)thisPtr));

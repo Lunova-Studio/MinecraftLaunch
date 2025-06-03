@@ -160,7 +160,7 @@ HttpUtil.Initialize();
 
 #region Curseforge API
 
-//CurseforgeProvider curseforgeProvider = "$2a$10$Awb53b9gSOIJJkdV3Zrgp.CyFP.dI13QKbWn/4UZI4G4ff18WneB6";
+//CurseforgeProvider curseforgeProvider = "Your Curseforge API";
 //await foreach (var cfResource in curseforgeProvider.SearchResourcesAsync("JEI")) {
 //    Console.WriteLine(cfResource.Name);
 //}
@@ -178,7 +178,7 @@ HttpUtil.Initialize();
 
 #region 微软验证
 
-//MicrosoftAuthenticator authenticator = new("Your client ID");
+//MicrosoftAuthenticator authenticator = new("Your Client ID");
 //var oAuth2Token = await authenticator.DeviceFlowAuthAsync(x => {
 //    Console.WriteLine(x.UserCode);
 //    Console.WriteLine(x.VerificationUrl);
@@ -195,12 +195,12 @@ HttpUtil.Initialize();
 
 #region 第三方验证
 
-//YggdrasilAuthenticator authenticator = new("https://littleskin.cn/api/yggdrasil", "Wxysdsb123@163.com", "wxysdsb12");
-//var result = authenticator.AuthenticateAsync();
-//await foreach (var item in result)
+//YggdrasilAuthenticator authenticator = new("https://littleskin.cn/api/yggdrasil", "Your email", "Your password");
+//var result = await authenticator.AuthenticateAsync();
+//foreach (var item in result)
 //    Console.WriteLine(item.Name);
 
-//var newResult = await authenticator.RefreshAsync(await result.FirstAsync());
+//var newResult = await authenticator.RefreshAsync(result.First());
 //Console.WriteLine(newResult.Name);
 
 #endregion

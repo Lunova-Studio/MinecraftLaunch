@@ -27,28 +27,22 @@ public sealed class McbbsModpackInstaller : InstallerBase {
         foreach (var addon in modpack.Addons) {
             cancellationToken.ThrowIfCancellationRequested();
 
-            switch (addon.Id) {
-                case "fabric":
-                    yield return await FabricInstaller.EnumerableFabricAsync(modpack.McVersion, cancellationToken)
-                        .FirstOrDefaultAsync(x => x.BuildVersion.Equals(addon.Version), cancellationToken);
-                    break;
-                case "quilt":
-                    yield return await QuiltInstaller.EnumerableQuiltAsync(modpack.McVersion, cancellationToken)
-                        .FirstOrDefaultAsync(x => x.BuildVersion.Equals(addon.Version), cancellationToken);
-                    break;
-                case "forge":
-                    yield return await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, false, cancellationToken)
-                        .FirstOrDefaultAsync(x => x.ForgeVersion.Equals(addon.Version), cancellationToken);
-                    break;
-                case "neoforge":
-                    yield return await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, true, cancellationToken)
-                        .FirstOrDefaultAsync(x => x.ForgeVersion.Equals(addon.Version), cancellationToken);
-                    break;
-                case "optifine":
-                    yield return await OptifineInstaller.EnumerableOptifineAsync(modpack.McVersion, cancellationToken)
-                        .FirstOrDefaultAsync(x => addon.Version.Contains(x.Type), cancellationToken);
-                    break;
-            }
+            IInstallEntry entry = addon.Id switch {
+                "fabric" => (await FabricInstaller.EnumerableFabricAsync(modpack.McVersion, cancellationToken))
+                    .First(x => x.BuildVersion.Equals(addon.Version)),
+                "quilt" => (await QuiltInstaller.EnumerableQuiltAsync(modpack.McVersion, cancellationToken))
+                    .First(x => x.BuildVersion.Equals(addon.Version)),
+                "forge" => (await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, false, cancellationToken))
+                    .First(x => x.ForgeVersion.Equals(addon.Version)),
+                "neoforge" => (await ForgeInstaller.EnumerableForgeAsync(modpack.McVersion, true, cancellationToken))
+                    .First(x => x.ForgeVersion.Equals(addon.Version)),
+                "optifine" => (await OptifineInstaller.EnumerableOptifineAsync(modpack.McVersion, cancellationToken))
+                    .First(x => addon.Version.Contains(x.Type)),
+                _ => null
+            };
+
+            if (entry != null)
+                yield return entry;
         }
     }
 
@@ -60,7 +54,6 @@ public sealed class McbbsModpackInstaller : InstallerBase {
         return json.Deserialize(McbbsModpackInstallEntryContext.Default.McbbsModpackInstallEntry)
             ?? throw new InvalidOperationException("Failed to parsemcbbs.packmeta");
     }
-
 
     public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);

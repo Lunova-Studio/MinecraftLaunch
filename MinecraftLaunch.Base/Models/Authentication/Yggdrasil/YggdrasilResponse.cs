@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MinecraftLaunch.Base.Models.Authentication;
+namespace MinecraftLaunch.Base.Models.Authentication.Yggdrasil;
 
 public record YggdrasilResponse {
     [JsonPropertyName("user")] public User User { get; set; }

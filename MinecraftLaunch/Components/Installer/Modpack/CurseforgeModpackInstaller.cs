@@ -55,14 +55,14 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
             };
 
             IInstallEntry installEntry = loaderType switch {
-                ModLoaderType.Forge => await ForgeInstaller.EnumerableForgeAsync(entry.McVersion, cancellationToken: cancellationToken)
-                    .FirstOrDefaultAsync(x => x.ForgeVersion.Equals(loaderVersion), cancellationToken),
+                ModLoaderType.Forge => (await ForgeInstaller.EnumerableForgeAsync(entry.McVersion, cancellationToken: cancellationToken))
+                    .First(x => x.ForgeVersion.Equals(loaderVersion)),
 
-                ModLoaderType.Fabric => await FabricInstaller.EnumerableFabricAsync(entry.McVersion, cancellationToken: cancellationToken)
-                    .FirstOrDefaultAsync(x => x.BuildVersion.Equals(loaderVersion), cancellationToken),
+                ModLoaderType.Fabric => (await FabricInstaller.EnumerableFabricAsync(entry.McVersion, cancellationToken: cancellationToken))
+                    .First(x => x.BuildVersion.Equals(loaderVersion)),
 
-                ModLoaderType.NeoForge => await ForgeInstaller.EnumerableForgeAsync(entry.McVersion, true, cancellationToken)
-                    .FirstOrDefaultAsync(x => x.ForgeVersion.Equals(loaderVersion), cancellationToken),
+                ModLoaderType.NeoForge => (await ForgeInstaller.EnumerableForgeAsync(entry.McVersion, true, cancellationToken))
+                    .First(x => x.ForgeVersion.Equals(loaderVersion)),
 
                 _ => throw new NotImplementedException()
             };
@@ -75,8 +75,8 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
         try {
-            var modInfoGroup = await ParseModFilesAsync(cancellationToken)
-                .ToLookupAsync(x => string.IsNullOrEmpty(x.url), cancellationToken);
+            var modInfoGroup = (await ParseModFilesAsync(cancellationToken))
+                .ToLookup(x => string.IsNullOrEmpty(x.url));
 
             var downloadUrls = modInfoGroup[false].Select(x => x.url).ToList();
             var invalidMods = modInfoGroup[true].Select(x => x.invalidMod).ToList();
@@ -112,7 +112,7 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
         throw new NotSupportedException("Your entry is incorrect or does not exist");
     }
 
-    private async IAsyncEnumerable<(string url, CurseforgeModpackFileEntry invalidMod)> ParseModFilesAsync([EnumeratorCancellation] CancellationToken cancellationToken) {
+    private async Task<IEnumerable<(string url, CurseforgeModpackFileEntry invalidMod)>> ParseModFilesAsync(CancellationToken cancellationToken) {
         int count = 0;
         int totalCount = Entry.ModFiles.Count();
         List<Task> requestTasks = [];
@@ -143,9 +143,7 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
         }
 
         await Task.WhenAll(requestTasks);
-        foreach (var downloadUrl in downloadInfoGroup) {
-            yield return downloadUrl;
-        }
+        return downloadInfoGroup;
     }
 
     private async IAsyncEnumerable<string> RedirectInvalidModsAsync(IEnumerable<CurseforgeModpackFileEntry> modpacks, [EnumeratorCancellation] CancellationToken cancellationToken) {
@@ -153,7 +151,7 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
 
         int count = 0;
         int totalCount = modpacks.Count();
-        foreach (var modpackFile in modpacks.AsParallel()) {
+        foreach (var modpackFile in modpacks) {
             var modFileName = (await CurseforgeProvider
                 .GetModFileEntryAsync(modpackFile.ProjectId, modpackFile.FileId, cancellationToken))
                 .GetString("fileName");

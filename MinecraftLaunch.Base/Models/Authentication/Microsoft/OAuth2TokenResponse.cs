@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MinecraftLaunch.Base.Models.Authentication;
+namespace MinecraftLaunch.Base.Models.Authentication.Microsoft;
 
-public sealed record OAuth2TokenResponse {
+public record OAuth2TokenResponse {
     [JsonPropertyName("foci")] public string Foci { get; set; }
     [JsonPropertyName("scope")] public string Scope { get; set; }
     [JsonPropertyName("user_id")] public string UserId { get; set; }

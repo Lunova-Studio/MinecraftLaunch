@@ -1,7 +1,10 @@
 ﻿using Flurl.Http;
 using MinecraftLaunch.Base.Models.Authentication;
+using MinecraftLaunch.Base.Models.Authentication.Microsoft;
 using MinecraftLaunch.Extensions;
+using MinecraftLaunch.Utilities;
 using System.Diagnostics;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
 
@@ -19,18 +22,20 @@ public sealed class MicrosoftAuthenticator {
     }
 
     public async Task<MicrosoftAccount> RefreshAsync(MicrosoftAccount account, CancellationToken cancellationToken = default) {
-        var url = "https://login.live.com/oauth20_token.srf";
-
-        var content = new {
-            client_id = _clientId,
-            refresh_token = account.RefreshToken,
-            grant_type = "refresh_token",
+        var request = HttpUtil.Request("https://login.live.com/oauth20_token.srf");
+        Dictionary<string, string> payload = new() {
+            ["client_id"] = _clientId,
+            ["refresh_token"] = account.RefreshToken,
+            ["grant_type"] = "refresh_token"
         };
 
-        var result = await url.PostUrlEncodedAsync(content, cancellationToken: cancellationToken);
-        var oAuth2Token = await result.GetJsonAsync<OAuth2TokenResponse>();
+        var result = await request.PostAsync(new FormUrlEncodedContent(payload),
+            cancellationToken: cancellationToken);
 
-        return await AuthenticateAsync(oAuth2Token, cancellationToken);
+        var json = await result.GetStringAsync();
+        var response = json.Deserialize(OAuth2TokenResponseContext.Default.OAuth2TokenResponse);
+
+        return await AuthenticateAsync(response, cancellationToken);
     }
 
     /// <summary>
@@ -39,9 +44,8 @@ public sealed class MicrosoftAuthenticator {
     /// <returns>A ValueTask that represents the asynchronous operation. The task result contains the authenticated Microsoft account.</returns>
     public async Task<MicrosoftAccount> AuthenticateAsync(OAuth2TokenResponse oAuth2Token, CancellationToken cancellationToken = default) {
         try {
-            if (oAuth2Token is null) {
-                throw new KeyNotFoundException();
-            }
+            if (oAuth2Token is null)
+                ArgumentException.ThrowIfNullOrEmpty(nameof(oAuth2Token));
 
             var xblToken = await GetXBLTokenAsync(oAuth2Token.AccessToken, cancellationToken);
             var xsts = await GetXSTSTokenAsync(xblToken, cancellationToken);
@@ -61,19 +65,17 @@ public sealed class MicrosoftAuthenticator {
     /// <param name="source">The cancellation token source to be used to cancel the operation.</param>
     /// <returns>A Task that represents the asynchronous operation. The task result contains the OAuth2 token response.</returns>
     public async Task<OAuth2TokenResponse> DeviceFlowAuthAsync(Action<DeviceCodeResponse> deviceCode, CancellationToken cancellationToken = default) {
-        if (string.IsNullOrEmpty(_clientId)) {
-            throw new ArgumentNullException("ClientId is empty!");
-        }
+        if (string.IsNullOrEmpty(_clientId))
+            ArgumentException.ThrowIfNullOrEmpty("ClientId");
 
-        string tenant = "/consumers";
         var parameters = new Dictionary<string, string> {
             ["client_id"] = _clientId,
-            ["tenant"] = tenant,
+            ["tenant"] =  "/consumers",
             ["scope"] = string.Join(" ", _scopes)
         };
 
-        string json = await "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode"
-            .PostUrlEncodedAsync(parameters)
+        var request = HttpUtil.Request("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode");
+        string json = await request.PostUrlEncodedAsync(parameters, cancellationToken: cancellationToken)
             .ReceiveString();
 
         var codeResponse = json.Deserialize(DeviceCodeResponseContext.Default.DeviceCodeResponse);
@@ -123,9 +125,10 @@ public sealed class MicrosoftAuthenticator {
     /// <summary>
     /// Get Xbox live token & userhash
     /// </summary>
-    private async Task<JsonNode> GetXBLTokenAsync(string token, CancellationToken cancellationToken = default) {
-        var xblContent = new {
-            Properties = new {
+    private static async Task<JsonNode> GetXBLTokenAsync(string token, CancellationToken cancellationToken = default) {
+        var request = HttpUtil.Request("https://user.auth.xboxlive.com/user/authenticate");
+        var xblContent = new XBLTokenPayload {
+            Properties = new XBLProperties {
                 AuthMethod = "RPS",
                 SiteName = "user.auth.xboxlive.com",
                 RpsTicket = $"d={token}"
@@ -134,8 +137,8 @@ public sealed class MicrosoftAuthenticator {
             TokenType = "JWT"
         };
 
-        using var xblJsonReq = await $"https://user.auth.xboxlive.com/user/authenticate"
-            .PostJsonAsync(xblContent, cancellationToken: cancellationToken);
+        using var xblJsonReq = await request.PostAsync(JsonContent.Create(xblContent,
+            MicrosoftRequestPayloadContext.Default.XBLTokenPayload), cancellationToken: cancellationToken);
 
         return (await xblJsonReq.GetStringAsync()).AsNode();
     }
@@ -145,20 +148,19 @@ public sealed class MicrosoftAuthenticator {
     /// </summary>
     /// <returns></returns>
     /// <exception cref="FailedAuthenticationException"></exception>
-    private async Task<JsonNode> GetXSTSTokenAsync(JsonNode xblTokenNode, CancellationToken cancellationToken = default) {
-        var xstsContent = new {
-            Properties = new {
+    private static async Task<JsonNode> GetXSTSTokenAsync(JsonNode xblTokenNode, CancellationToken cancellationToken = default) {
+        var request = HttpUtil.Request("https://xsts.auth.xboxlive.com/xsts/authorize");
+        var xstsContent = new XSTSTokenPayload {
+            Properties = new XSTSProperties {
                 SandboxId = "RETAIL",
-                UserTokens = new[] {
-                    xblTokenNode.GetString("Token")
-                }
+                UserTokens = [xblTokenNode.GetString("Token")]
             },
             RelyingParty = "rp://api.minecraftservices.com/",
             TokenType = "JWT"
         };
 
-        using var xstsJsonReq = await $"https://xsts.auth.xboxlive.com/xsts/authorize"
-            .PostJsonAsync(xstsContent, cancellationToken: cancellationToken);
+        using var xstsJsonReq = await request.PostAsync(JsonContent.Create(xstsContent,
+            MicrosoftRequestPayloadContext.Default.XSTSTokenPayload), cancellationToken: cancellationToken);
 
         return (await xstsJsonReq.GetStringAsync()).AsNode();
     }
@@ -166,18 +168,19 @@ public sealed class MicrosoftAuthenticator {
     /// <summary>
     /// Get Minecraft access token
     /// </summary>
-    private async Task<JsonNode> GetMinecraftAccessTokenAsync((JsonNode xblTokenNode, JsonNode xstsTokenNode) nodes, CancellationToken cancellationToken = default) {
-        var authenticateMinecraftContent = new {
-            identityToken = $"XBL3.0 x={nodes.xblTokenNode["DisplayClaims"]["xui"].AsArray()
+    private static async Task<JsonNode> GetMinecraftAccessTokenAsync((JsonNode xblTokenNode, JsonNode xstsTokenNode) nodes, CancellationToken cancellationToken = default) {
+        var request = HttpUtil.Request("https://api.minecraftservices.com/authentication/login_with_xbox");
+        var xstsToken = nodes.xstsTokenNode.GetString("Token");
+        var uhsToken = nodes.xblTokenNode.Select("DisplayClaims")
+            .GetEnumerable("xui")
             .FirstOrDefault()
-            .GetString("uhs")};{nodes.xstsTokenNode!
-            .GetString("Token")}"
-        };
+            .GetString("uhs");
 
-        using var authenticateMinecraftPostRes = await $"https://api.minecraftservices.com/authentication/login_with_xbox"
-            .PostJsonAsync(authenticateMinecraftContent, cancellationToken: cancellationToken);
+        var payload = new MinecraftPayload($"XBL3.0 x={uhsToken};{xstsToken}");
+        using var mcTokenReq = await request.PostAsync(JsonContent.Create(payload,
+            MicrosoftRequestPayloadContext.Default.MinecraftPayload), cancellationToken: cancellationToken);
 
-        return (await authenticateMinecraftPostRes.GetStringAsync()).AsNode();
+        return (await mcTokenReq.GetStringAsync()).AsNode();
     }
 
     /// <summary>
@@ -186,11 +189,11 @@ public sealed class MicrosoftAuthenticator {
     /// <param name="accessToken">Minecraft access token</param>
     /// <param name="refreshToken">Minecraft refresh token</param>
     /// <exception cref="InvalidOperationException">If authenticated user don't have minecraft, the exception will be thrown</exception>
-    private async Task<MicrosoftAccount> GetMinecraftProfileAsync(string accessToken, string refreshToken, CancellationToken cancellationToken = default) {
-        using var profileRes = await "https://api.minecraftservices.com/minecraft/profile"
-            .WithHeader("Authorization", $"Bearer {accessToken}")
-            .GetAsync(cancellationToken: cancellationToken);
+    private static async Task<MicrosoftAccount> GetMinecraftProfileAsync(string accessToken, string refreshToken, CancellationToken cancellationToken = default) {
+        var request = HttpUtil.Request("https://api.minecraftservices.com/minecraft/profile")
+            .WithHeader("Authorization", $"Bearer {accessToken}");
 
+        using var profileRes = await request.GetAsync(cancellationToken: cancellationToken);
         var profileNode = (await profileRes.GetStringAsync())
             .AsNode();
 
