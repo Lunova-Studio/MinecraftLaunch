@@ -23,6 +23,14 @@ public static class JsonNodeExtension {
         return node[name];
     }
 
+    public static bool TryGetValue<T>(this JsonNode node, string name, out T value) {
+        var cNode = node[name];
+        var flag = cNode is not null;
+
+        value = flag ? cNode.GetValue<T>() : default;
+        return flag;
+    }
+
     public static int GetInt32(this JsonNode node) {
         return node.GetValue<int>();
     }

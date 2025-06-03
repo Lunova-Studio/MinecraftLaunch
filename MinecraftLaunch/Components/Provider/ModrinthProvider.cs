@@ -1,0 +1,120 @@
+﻿using Flurl;
+using Flurl.Http;
+using MinecraftLaunch.Base.Enums;
+using MinecraftLaunch.Base.Models.Network;
+using MinecraftLaunch.Extensions;
+using MinecraftLaunch.Utilities;
+using System.Text;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+
+namespace MinecraftLaunch.Components.Provider;
+
+public sealed class ModrinthProvider {
+    public readonly string ModrinthApi = "https://api.modrinth.com/v2";
+
+    public async Task<IEnumerable<ModrinthResource>> GetFeaturedResourcesAsync(CancellationToken cancellationToken = default) {
+        var request = HttpUtil.Request(ModrinthApi, "search");
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        if (jsonNode is null)
+            return [];
+
+        return jsonNode.GetEnumerable("hits").Select(Parse);
+    }
+
+    public async Task<IEnumerable<ModrinthResource>> SearchByUserAsync(string user, CancellationToken cancellationToken = default) {
+        var request = HttpUtil.Request(ModrinthApi, "user", user, "projects");
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        if (jsonNode is null)
+            return [];
+
+        return jsonNode.GetEnumerable().Select(x => {
+            var resource = Parse(x);
+            resource.Author = user;
+            return resource;
+        });
+
+    }
+
+    public async Task<IEnumerable<ModrinthResource>> SearchAsync(
+        string searchFilter,
+        string version = "",
+        string category = "",
+        string projectType = "mod",
+        ModrinthSearchIndex index = ModrinthSearchIndex.Relevance,
+        CancellationToken cancellationToken = default) {
+        var facetsList = new List<List<string>> {
+            new() { $"project_type:{projectType}" },
+        };
+
+        if (!string.IsNullOrEmpty(version))
+            facetsList.Add([$"versions:{version}"]);
+
+        if (!string.IsNullOrEmpty(category))
+            facetsList.Add([$"categories:{category}"]);
+
+        var facets = facetsList.Serialize(ModrinthProviderContext
+            .Default.ListListString);
+
+        // 构建 URL
+        var url = new Url(ModrinthApi)
+            .AppendPathSegment("search")
+            .SetQueryParams(new {
+                query = searchFilter,
+                facets,
+                index = index switch {
+                    ModrinthSearchIndex.Downloads => "downloads",
+                    ModrinthSearchIndex.Relevance => "relevance",
+                    ModrinthSearchIndex.Followers => "followers",
+                    ModrinthSearchIndex.DateUpdated => "updated",
+                    ModrinthSearchIndex.DatePublished => "newest",
+                    _ => "relevance"
+                },
+
+            });
+
+        var request = HttpUtil.Request(url);
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        if (jsonNode is null)
+            return [];
+
+        return jsonNode.GetEnumerable("hits").Select(Parse);
+    }
+
+    #region Private
+
+    private static ModrinthResource Parse(JsonNode jsonNode) {
+        return new ModrinthResource {
+            Id = jsonNode.GetString("id"),
+            Slug = jsonNode.GetString("slug"),
+            Name = jsonNode.GetString("title"),
+            Author = jsonNode.GetString("author"),
+            IconUrl = jsonNode.GetString("icon_url"),
+            Summary = jsonNode.GetString("description"),
+            ProjectType = jsonNode.GetString("project_type"),
+            DownloadCount = jsonNode.GetInt32("downloads"),
+            Categories = jsonNode.GetEnumerable<string>("categories"),
+            ScreenshotUrls = jsonNode.GetEnumerable<string>("gallery"),
+            Updated = jsonNode.TryGetValue<DateTime>("date_modified", out var updated)
+                 ? updated
+                 : jsonNode.GetDateTime("updated"),
+            Published = jsonNode.TryGetValue<DateTime>("date_created", out var published)
+                 ? published
+                 : jsonNode.GetDateTime("published")
+        };
+    }
+
+    #endregion
+}
+
+[JsonSerializable(typeof(List<List<string>>))]
+internal sealed partial class ModrinthProviderContext : JsonSerializerContext;

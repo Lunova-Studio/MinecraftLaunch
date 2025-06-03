@@ -160,10 +160,19 @@ HttpUtil.Initialize();
 
 #region Curseforge API
 
-CurseforgeProvider curseforgeProvider = "$2a$10$Awb53b9gSOIJJkdV3Zrgp.CyFP.dI13QKbWn/4UZI4G4ff18WneB6";
-await foreach (var cfResource in curseforgeProvider.SearchResourcesAsync("JEI")) {
-    Console.WriteLine(cfResource.Name);
-}
+//CurseforgeProvider curseforgeProvider = "$2a$10$Awb53b9gSOIJJkdV3Zrgp.CyFP.dI13QKbWn/4UZI4G4ff18WneB6";
+//await foreach (var cfResource in curseforgeProvider.SearchResourcesAsync("JEI")) {
+//    Console.WriteLine(cfResource.Name);
+//}
+
+#endregion
+
+#region Modrinth API
+
+//ModrinthProvider modrinthProvider = new();
+//foreach (var mhResource in await modrinthProvider.SearchAsync("Iris")) {
+//    Console.WriteLine(mhResource.Name);
+//}
 
 #endregion
 
