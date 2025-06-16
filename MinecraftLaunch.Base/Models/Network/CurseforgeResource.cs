@@ -18,6 +18,7 @@ public record CurseforgeResourceFile {
     public required int Id { get; init; }
     public required int ModId { get; init; }
     public required int ReleaseType { get; init; }
+    public required uint FileFingerprint { get; init; }
     public required bool IsAvailable { get; init; }
     public required string FileName { get; init; }
     public required string DisplayName { get; init; }
@@ -26,4 +27,4 @@ public record CurseforgeResourceFile {
     public required IEnumerable<string> MinecraftVersions { get; init; }
 
     public bool IsReleased => ReleaseType is 1;
-}
+}//

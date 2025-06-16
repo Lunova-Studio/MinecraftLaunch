@@ -4,6 +4,7 @@ using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -12,6 +13,28 @@ namespace MinecraftLaunch.Components.Provider;
 
 public sealed class ModrinthProvider {
     public readonly string ModrinthApi = "https://api.modrinth.com/v2";
+
+    public async Task<IEnumerable<ModrinthResourceFiles>> GetModFilesBySha1Async(
+        string[] hashes,
+        string version,
+        HashType type = HashType.SHA1,
+        CancellationToken cancellationToken = default) {
+        var url = new Url(ModrinthApi)
+            .AppendPathSegments("version_files", "update");
+
+        var request = HttpUtil.Request(url);
+        var payload = new ModrinthFilesUpdateCheckRequestPayload(hashes, [version],
+            type is HashType.SHA1 ? "sha1" : "sha512");
+
+        using var responseMessage = await request.PostAsync(JsonContent.Create(payload,
+            ModrinthProviderContext.Default.ModrinthFilesUpdateCheckRequestPayload),
+                cancellationToken: cancellationToken);
+
+        var jsonNode = (await responseMessage.GetStringAsync())
+            .AsNode();
+
+        return hashes.Select(x => ParseFile(jsonNode.Select(x)));
+    }
 
     public async Task<IEnumerable<ModrinthResource>> GetFeaturedResourcesAsync(CancellationToken cancellationToken = default) {
         var request = HttpUtil.Request(ModrinthApi, "search");
@@ -113,8 +136,30 @@ public sealed class ModrinthProvider {
         };
     }
 
+    private static ModrinthResourceFiles ParseFile(JsonNode node) {
+        return new ModrinthResourceFiles {
+            Id = node.GetString("id"),
+            SourceHash = node.GetPropertyName(),
+            IsFeatured = node.GetBool("featured"),
+            ChangeLog = node.GetString("changelog"),
+            DownloadCount = node.GetInt32("downloads"),
+            Published = node.GetDateTime("date_published"),
+            Files = node.GetEnumerable("files").Select(x => new ModrinthResourceFile {
+                FileSize = x.GetInt64("size"),
+                DownloadUrl = x.GetString("url"),
+                IsPrimary = x.GetBool("primary"),
+                FileName = x.GetString("filename"),
+                Sha1 = x.Select("hashes").GetString("sha1"),
+                Sha512 = x.Select("hashes").GetString("sha512"),
+            }).Where(x => x.IsPrimary)
+        };
+    }
+
     #endregion
 }
 
+internal record ModrinthFilesUpdateCheckRequestPayload(string[] hashes, string[] game_versions, string algorithm = "sha1");
+
 [JsonSerializable(typeof(List<List<string>>))]
+[JsonSerializable(typeof(ModrinthFilesUpdateCheckRequestPayload))]
 internal sealed partial class ModrinthProviderContext : JsonSerializerContext;

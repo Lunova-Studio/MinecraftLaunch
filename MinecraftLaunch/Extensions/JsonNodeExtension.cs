@@ -1,8 +1,6 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
-using System.Text.Json.Serialization;
-using System.Text.Json;
-using MinecraftLaunch.Base.Models.JsonConverter;
 
 namespace MinecraftLaunch.Extensions;
 
@@ -17,6 +15,10 @@ public static class JsonNodeExtension {
 
     public static JsonNode AsNode(this string json) {
         return JsonNode.Parse(json);
+    }
+
+    public static JsonArray AsArray(this IEnumerable<JsonNode> jsonNodes) {
+        return [.. jsonNodes];
     }
 
     public static JsonNode Select(this JsonNode node, string name) {
@@ -37,6 +39,14 @@ public static class JsonNodeExtension {
 
     public static int GetInt32(this JsonNode node, string name) {
         return node.Select(name).GetValue<int>();
+    }
+
+    public static uint GetUInt32(this JsonNode node) {
+        return node.GetValue<uint>();
+    }
+
+    public static uint GetUInt32(this JsonNode node, string name) {
+        return node.Select(name).GetValue<uint>();
     }
 
     public static long GetInt64(this JsonNode node) {

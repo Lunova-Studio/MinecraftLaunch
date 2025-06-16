@@ -16,7 +16,7 @@ public sealed class CurseforgeProvider {
     public static string CurseforgeApiKey { get; set; } = string.Empty;
     public readonly static string CurseforgeApi = "https://api.curseforge.com/v1";
 
-    public async Task<IEnumerable<CurseforgeResourceFile>> GetModFilesByFingerprints(int[] modFingerprints, CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<CurseforgeResourceFile>> GetModFilesByFingerprintsAsync(int[] modFingerprints, CancellationToken cancellationToken = default) {
         var request = CreateRequest("fingerprints", "432");
         var payload = new CurseforgeFingerprintsRequestPayload(modFingerprints);
 
@@ -176,6 +176,7 @@ public sealed class CurseforgeProvider {
             ReleaseType = node.GetInt32("releaseType"),
             DisplayName = node.GetString("displayName"),
             DownloadUrl = node.GetString("downloadUrl"),
+            FileFingerprint = node.GetUInt32("fileFingerprint"),
             MinecraftVersions = node.GetEnumerable<string>("gameVersions")
         };
     }

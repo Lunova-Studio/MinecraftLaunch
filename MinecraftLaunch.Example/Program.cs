@@ -19,6 +19,7 @@ using System.Net;
 
 DownloadMirrorManager.MaxThread = 256;
 DownloadMirrorManager.IsEnableMirror = false;
+CurseforgeProvider.CurseforgeApiKey = "Your Curseforge API";
 MinecraftParser.DataProcessors.Add(new DefaultLauncherProfileParser());
 
 HttpUtil.Initialize();
@@ -161,9 +162,12 @@ HttpUtil.Initialize();
 
 #region Curseforge API
 
-//CurseforgeProvider curseforgeProvider = "Your Curseforge API";
-//await foreach (var cfResource in curseforgeProvider.SearchResourcesAsync("JEI")) {
-//    Console.WriteLine(cfResource.Name);
+//CurseforgeProvider curseforgeProvider = new();
+//foreach (var cfResource in await curseforgeProvider.GetModFilesByFingerprintsAsync([568671043])) {
+//    Console.WriteLine(cfResource.FileName);
+//    Console.WriteLine(cfResource.DownloadUrl);
+//    Console.WriteLine($"is need update:{!lf.Equals(cfResource.FileFingerprint)}");
+//    Console.WriteLine();
 //}
 
 #endregion
@@ -208,27 +212,27 @@ HttpUtil.Initialize();
 
 #region 本地游戏读取
 
-MinecraftParser minecraftParser = @"D:\GamePackage\.minecraft";
+//MinecraftParser minecraftParser = @"D:\GamePackage\.minecraft";
 
-minecraftParser.GetMinecrafts().ForEach(x => {
-    Console.WriteLine(x.Id);
-    Console.WriteLine($"是否为原版：{x.IsVanilla}");
+//minecraftParser.GetMinecrafts().ForEach(x => {
+//    Console.WriteLine(x.Id);
+//    Console.WriteLine($"是否为原版：{x.IsVanilla}");
 
-    if (!x.IsVanilla) {
-        Console.WriteLine("Mod 加载器：" + string.Join("，", (x as ModifiedMinecraftEntry)?.ModLoaders.Select(x => $"{x.Type}_{x.Version}")!));
-    }
+//    if (!x.IsVanilla) {
+//        Console.WriteLine("Mod 加载器：" + string.Join("，", (x as ModifiedMinecraftEntry)?.ModLoaders.Select(x => $"{x.Type}_{x.Version}")!));
+//    }
 
-    Console.WriteLine();
-});
+//    Console.WriteLine();
+//});
 
-foreach (var processor in MinecraftParser.DataProcessors) {
-    foreach (var item in processor.Datas) {
-        Console.WriteLine($"Id:{(item.Value as GameProfileEntry)!.Name}");
-        Console.WriteLine($"Type:{(item.Value as GameProfileEntry)!.Type}");
-        Console.WriteLine($"Resolution - Width:{(item.Value as GameProfileEntry)!.Resolution?.Width} - Height:{(item.Value as GameProfileEntry)!.Resolution?.Height}");
-        Console.WriteLine();
-    }
-}
+//foreach (var processor in MinecraftParser.DataProcessors) {
+//    foreach (var item in processor.Datas) {
+//        Console.WriteLine($"Id:{(item.Value as GameProfileEntry)!.Name}");
+//        Console.WriteLine($"Type:{(item.Value as GameProfileEntry)!.Type}");
+//        Console.WriteLine($"Resolution - Width:{(item.Value as GameProfileEntry)!.Resolution?.Width} - Height:{(item.Value as GameProfileEntry)!.Resolution?.Height}");
+//        Console.WriteLine();
+//    }
+//}
 
 #endregion
 
