@@ -161,7 +161,7 @@ public sealed class ModrinthProvider {
 
     private static ModrinthResourceFiles ParseFile(JsonNode node) {
         return new ModrinthResourceFiles {
-            Id = node.GetString("id"),
+            Id = node.GetString("project_id"),
             SourceHash = node.GetPropertyName(),
             IsFeatured = node.GetBool("featured"),
             ChangeLog = node.GetString("changelog"),
