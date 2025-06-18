@@ -32,8 +32,9 @@ public sealed class CurseforgeProvider {
         if (exactMatches is null)
             return [];
 
-        return exactMatches.SelectMany(x => x.GetEnumerable("latestFiles"))
+        return exactMatches?.SelectMany(x => x.GetEnumerable("latestFiles"))
             .Select(ParseFile)
+            .Where(x => x is not null)
             .OrderByDescending(x => x.Published);
     }
 
@@ -200,6 +201,9 @@ public sealed class CurseforgeProvider {
     }
 
     private static CurseforgeResourceFile ParseFile(JsonNode node) {
+        if (node is null)
+            return null;
+
         return new CurseforgeResourceFile {
             Id = node.GetInt32("id"),
             ModId = node.GetInt32("modId"),

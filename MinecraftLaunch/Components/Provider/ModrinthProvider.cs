@@ -33,7 +33,8 @@ public sealed class ModrinthProvider {
         var jsonNode = (await responseMessage.GetStringAsync())
             .AsNode();
 
-        return hashes.Select(x => ParseFile(jsonNode.Select(x)));
+        return hashes.Select(x => ParseFile(jsonNode.Select(x)))
+            .Where(x => x is not null);
     }
 
     public async Task<ModrinthResource> SearchByProjectIdAsync(string projectId, CancellationToken cancellationToken = default) {
@@ -160,6 +161,8 @@ public sealed class ModrinthProvider {
     }
 
     private static ModrinthResourceFiles ParseFile(JsonNode node) {
+        if(node == null) return null;
+
         return new ModrinthResourceFiles {
             Id = node.GetString("project_id"),
             SourceHash = node.GetPropertyName(),
