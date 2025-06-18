@@ -16,7 +16,7 @@ public sealed class CurseforgeProvider {
     public static string CurseforgeApiKey { get; set; } = string.Empty;
     public readonly static string CurseforgeApi = "https://api.curseforge.com/v1";
 
-    public async Task<IEnumerable<CurseforgeResourceFile>> GetResourceFilesByFingerprintsAsync(int[] modFingerprints, CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<CurseforgeResourceFile>> GetResourceFilesByFingerprintsAsync(uint[] modFingerprints, CancellationToken cancellationToken = default) {
         var request = CreateRequest("fingerprints", "432");
         var payload = new CurseforgeFingerprintsRequestPayload(modFingerprints);
 
@@ -250,7 +250,7 @@ public class InvalidModpackFileException : Exception {
 }
 
 internal record CurseforgeResourcesRequestPayload(long[] modIds);
-internal record CurseforgeFingerprintsRequestPayload(int[] fingerprints);
+internal record CurseforgeFingerprintsRequestPayload(uint[] fingerprints);
 internal record CurseforgeFeaturedRequestPayload(int gameId, int[] excludedModIds, string gameVersionTypeId = null);
 
 [JsonSerializable(typeof(CurseforgeFeaturedRequestPayload))]
