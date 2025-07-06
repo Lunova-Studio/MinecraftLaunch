@@ -156,13 +156,13 @@ public sealed class ModrinthProvider {
             ProjectType = jsonNode.GetString("project_type"),
             DownloadCount = jsonNode.GetInt32("downloads"),
             Categories = jsonNode.GetEnumerable<string>("categories"),
-            ScreenshotUrls = isDetail
+            Screenshots = isDetail
                 ? jsonNode?.GetEnumerable<string>("gallery", "url")
                 : jsonNode?.GetEnumerable<string>("gallery"),
             Updated = jsonNode.TryGetValue<DateTime>("date_modified", out var updated)
                 ? updated
                 : jsonNode.GetDateTime("updated"),
-            Published = jsonNode.TryGetValue<DateTime>("date_created", out var published)
+            DateModified = jsonNode.TryGetValue<DateTime>("date_created", out var published)
                 ? published
                 : jsonNode.GetDateTime("published")
         };

@@ -1,20 +1,22 @@
-﻿namespace MinecraftLaunch.Base.Models.Network;
+﻿using MinecraftLaunch.Base.Interfaces;
 
-public record ModrinthResource {
-    public string Id { get; set; }
-    public string Slug { get; set; }
-    public string Name { get; set; }
+namespace MinecraftLaunch.Base.Models.Network;
+
+public record ModrinthResource : IResource {
+    public string Id { get; init; }
+    public string Slug { get; init; }
+    public string Name { get; init; }
     public string Author { get; set; }
-    public string Summary { get; set; }
-    public string IconUrl { get; set; }
-    public string ProjectType { get; set; }
+    public string Summary { get; init; }
+    public string IconUrl { get; init; }
+    public string ProjectType { get; init; }
 
-    public int DownloadCount { get; set; }
+    public int DownloadCount { get; init; }
 
-    public DateTime Updated { get; set; }
-    public DateTime Published { get; set; }
-    public IEnumerable<string> Categories { get; set; }
-    public IEnumerable<string> ScreenshotUrls { get; set; }
+    public DateTime Updated { get; init; }
+    public DateTime DateModified { get; init; }
+    public IEnumerable<string> Categories { get; init; }
+    public IEnumerable<string> Screenshots { get; init; }
 
     public string WebLink => $"https://modrinth.com/{ProjectType}/{Slug}";
 }

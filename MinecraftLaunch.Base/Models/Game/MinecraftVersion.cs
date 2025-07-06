@@ -17,7 +17,7 @@ public partial record struct MinecraftVersion(string VersionId, MinecraftVersion
         if (ReleaseRegex().IsMatch(id))
             return new MinecraftVersion(id, MinecraftVersionType.Release);
         else if (PreReleaseRegex().IsMatch(id))
-            return new MinecraftVersion(id, MinecraftVersionType.PreRelease);
+            return new MinecraftVersion(id, MinecraftVersionType.Snapshot);
         else if (SnapshotRegex().IsMatch(id))
             return new MinecraftVersion(id, MinecraftVersionType.Snapshot);
         else if (id.StartsWith("beta", StringComparison.OrdinalIgnoreCase))
@@ -25,6 +25,6 @@ public partial record struct MinecraftVersion(string VersionId, MinecraftVersion
         else if (id.StartsWith("alpha", StringComparison.OrdinalIgnoreCase))
             return new MinecraftVersion(id, MinecraftVersionType.OldAlpha);
         else
-            return new MinecraftVersion(id, MinecraftVersionType.Unknown);
+            return new MinecraftVersion(id, MinecraftVersionType.Release);
     }
 }

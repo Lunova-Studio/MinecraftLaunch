@@ -1,6 +1,8 @@
-﻿namespace MinecraftLaunch.Base.Models.Network;
+﻿using MinecraftLaunch.Base.Interfaces;
 
-public record CurseforgeResource {
+namespace MinecraftLaunch.Base.Models.Network;
+
+public record CurseforgeResource : IResource {
     public required int Id { get; init; }
     public required int ClassId { get; init; }
     public required int DownloadCount { get; init; }
