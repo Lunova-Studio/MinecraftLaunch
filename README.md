@@ -1,6 +1,6 @@
 <div align="center">
 
-<img Height="100" Width="100" src="https://blessing-studio.cn/wp-content/uploads/2025/01/IMG_2186.png"/>
+<img Height="100" Width="100" src="https://lunova.studio/wp-content/uploads/2025/07/MinecraftLaunch-scaled.png"/>
 
 # MinecraftLaunch
 
