@@ -182,7 +182,7 @@ public sealed class ModrinthProvider {
             DownloadCount = node.GetInt32("downloads"),
             Published = node.GetDateTime("date_published"),
             Files = node.GetEnumerable("files").Select(x => new ModrinthResourceFile {
-                FileSize = x.GetInt64("size"),
+                FileSize = x.GetInt64("size").Value,
                 DownloadUrl = x.GetString("url"),
                 IsPrimary = x.GetBool("primary"),
                 FileName = x.GetString("filename"),

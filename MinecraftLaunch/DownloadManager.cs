@@ -3,8 +3,11 @@ using System.Collections.Frozen;
 
 namespace MinecraftLaunch;
 
-public static class DownloadMirrorManager {
+public static class DownloadManager {
+    public static string CurseforgeApiKey { get; set; } = string.Empty;
+
     public static int MaxThread { get; set; } = 64;
+    public static int MaxFragmented { get; set; } = 128;
     public static bool IsEnableMirror { get; set; }
 
     public static readonly IDownloadMirror BmclApi = new BmclApiSource();
@@ -25,7 +28,7 @@ public sealed class BmclApiSource : IDownloadMirror {
     }.ToFrozenDictionary();
 
     public string TryFindUrl(string sourceUrl) {
-        if (!DownloadMirrorManager.IsEnableMirror)
+        if (!DownloadManager.IsEnableMirror)
             return sourceUrl;
 
         foreach (var (src, mirror) in _replacementMap)

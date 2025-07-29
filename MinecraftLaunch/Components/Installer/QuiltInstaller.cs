@@ -79,7 +79,7 @@ public sealed class QuiltInstaller : InstallerBase {
         ReportProgress(InstallStep.DownloadVersionJson, 0.20d, TaskStatus.Running, 1, 0);
 
         string requestUrl = $"https://meta.quiltmc.org/v3/versions/loader/{Entry.McVersion}/{Entry.BuildVersion}/profile/json";
-        requestUrl = DownloadMirrorManager.BmclApi.TryFindUrl(requestUrl);
+        requestUrl = DownloadManager.BmclApi.TryFindUrl(requestUrl);
 
         var json = await requestUrl.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
         string entryId = CustomId ??
@@ -113,7 +113,7 @@ public sealed class QuiltInstaller : InstallerBase {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
 
-        var resourceDownloader = new MinecraftResourceDownloader(minecraft, DownloadMirrorManager.MaxThread);
+        var resourceDownloader = new MinecraftResourceDownloader(minecraft);
 
         int count = 0;
         resourceDownloader.ProgressChanged += (_, x)

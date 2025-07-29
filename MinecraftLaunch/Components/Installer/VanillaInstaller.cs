@@ -22,7 +22,7 @@ public sealed class VanillaInstaller : InstallerBase {
     }
 
     public static async Task<IEnumerable<VersionManifestEntry>> EnumerableMinecraftAsync(CancellationToken cancellationToken = default) {
-        var url = DownloadMirrorManager.BmclApi
+        var url = DownloadManager.BmclApi
             .TryFindUrl("https://launchermeta.mojang.com/mc/game/version_manifest.json");
 
         var node = (await url.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken))
@@ -61,7 +61,7 @@ public sealed class VanillaInstaller : InstallerBase {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadVersionJson, 0.15d, TaskStatus.Running, 1, 0);
 
-        string requestUrl = DownloadMirrorManager.BmclApi.TryFindUrl(Entry.Url);
+        string requestUrl = DownloadManager.BmclApi.TryFindUrl(Entry.Url);
         var json = await requestUrl.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
 
         var jsonPath = new FileInfo(Path.Combine(MinecraftFolder, "versions", Entry.Id, $"{Entry.Id}.json"));
@@ -82,7 +82,7 @@ public sealed class VanillaInstaller : InstallerBase {
         var assetIndex = entry.GetAssetIndex();
         var jsonFile = new FileInfo(entry.AssetIndexJsonPath);
 
-        string requestUrl = DownloadMirrorManager.BmclApi.TryFindUrl(assetIndex.Url);
+        string requestUrl = DownloadManager.BmclApi.TryFindUrl(assetIndex.Url);
         var json = await requestUrl.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
 
         if (!jsonFile.Directory.Exists) {
@@ -99,7 +99,7 @@ public sealed class VanillaInstaller : InstallerBase {
         cancellationToken.ThrowIfCancellationRequested();
 
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
-        var resourceDownloader = new MinecraftResourceDownloader(entry, DownloadMirrorManager.MaxThread);
+        var resourceDownloader = new MinecraftResourceDownloader(entry);
 
         int count = 0;
         resourceDownloader.ProgressChanged += (_, x)

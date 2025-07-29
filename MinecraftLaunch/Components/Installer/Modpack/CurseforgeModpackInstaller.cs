@@ -81,10 +81,9 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
             var downloadUrls = modInfoGroup[false].Select(x => x.url).ToList();
             var invalidMods = modInfoGroup[true].Select(x => x.invalidMod).ToList();
 
-            var redirectownloadUrls = await RedirectInvalidModsAsync(invalidMods, cancellationToken)
-                .ToListAsync(cancellationToken);
-
-            downloadUrls.AddRange(redirectownloadUrls);
+            var redirectownloadUrls = RedirectInvalidModsAsync(invalidMods, cancellationToken);
+            await foreach (var downloadUrl in redirectownloadUrls)
+                downloadUrls.Add(downloadUrl);
 
             await DownloadModsAsync(downloadUrls, cancellationToken);
             await ExtractModpackAsync(cancellationToken);

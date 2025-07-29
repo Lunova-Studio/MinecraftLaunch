@@ -114,7 +114,7 @@ public sealed class ModrinthModpackInstaller : InstallerBase {
         ReportProgress(InstallStep.DownloadMods, 0.45d, TaskStatus.Running,
             totalCount, 0, 0, false);
 
-        return new FileDownloader(DownloadMirrorManager.MaxThread)
+        return new FileDownloader(DownloadManager.MaxThread)
             .DownloadFilesAsync(groupRequest, cancellationToken);
     }
 

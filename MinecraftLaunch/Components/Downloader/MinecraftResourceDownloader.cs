@@ -1,4 +1,5 @@
-﻿using MinecraftLaunch.Base.Enums;
+﻿using Flurl.Http;
+using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.EventArgs;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
@@ -11,7 +12,7 @@ namespace MinecraftLaunch.Components.Downloader;
 
 public sealed class MinecraftResourceDownloader {
     private readonly MinecraftEntry _entry;
-    private readonly FileDownloader _downloader;
+    private readonly DefaultDownloader _downloader;
     private readonly List<MinecraftDependency> _dependencies = [];
 
     public event EventHandler<ResourceDownloadProgressChangedEventArgs> ProgressChanged;
@@ -20,16 +21,15 @@ public sealed class MinecraftResourceDownloader {
     public bool AllowVerifyAssets { get; init; } = true;
     public bool AllowInheritedDependencies { get; init; } = true;
 
-    public MinecraftResourceDownloader(MinecraftEntry entry, int maxThread = 64, IEnumerable<MinecraftDependency> extraDependencies = null) {
+    public MinecraftResourceDownloader(MinecraftEntry entry, IEnumerable<MinecraftDependency> extraDependencies = null) {
         if (extraDependencies is not null)
             _dependencies.AddRange(extraDependencies);
 
         _entry = entry;
-        _downloader = new(maxThread);
+        _downloader = new();
     }
 
-    public async Task<GroupDownloadResult> VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default)
-    {
+    public async Task VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default) {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileVerificationParallelism);
 
         #region 1.1 Libraries & Inherited Libraries
@@ -40,8 +40,7 @@ public sealed class MinecraftResourceDownloader {
 
         if (AllowInheritedDependencies
             && _entry is ModifiedMinecraftEntry modInstance
-            && modInstance.HasInheritance)
-        {
+            && modInstance.HasInheritance) {
             (libs, nativeLibs) = modInstance.InheritedMinecraft.GetRequiredLibraries();
             _dependencies.AddRange(libs);
             _dependencies.AddRange(nativeLibs);
@@ -52,8 +51,7 @@ public sealed class MinecraftResourceDownloader {
         #region 1.2 Client.jar
 
         var jar = _entry.GetJarElement();
-        if (jar != null)
-        {
+        if (jar != null) {
             _dependencies.Add(jar);
         }
 
@@ -61,20 +59,13 @@ public sealed class MinecraftResourceDownloader {
 
         #region 1.3 AssetIndex & Assets
 
-        if (AllowVerifyAssets)
-        {
+        if (AllowVerifyAssets) {
             var assetIndex = _entry.GetAssetIndex();
 
             // 验证 AssetIndex 文件
-            if (!VerifyDependency(assetIndex, cancellationToken))
-            {
-                var result = await _downloader
-                    .DownloadFileAsync(new(assetIndex.Url, assetIndex.FullPath), cancellationToken);
-
-                if (result.Type == DownloadResultType.Failed)
-                {
-                    throw new Exception("Failed to obtain the dependent material index file");
-                }
+            if (!VerifyDependency(assetIndex, cancellationToken)) {
+                await assetIndex.Url.DownloadFileAsync(Path.Combine(assetIndex.MinecraftFolderPath, "assets", "indexes"),
+                    $"{assetIndex.Id}.json", 65536, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             }
 
             // 添加资源文件到依赖列表
@@ -84,10 +75,9 @@ public sealed class MinecraftResourceDownloader {
         #endregion
 
         // 2. 验证依赖项
-        ConcurrentBag<MinecraftDependency> invalidDeps = new();
+        ConcurrentBag<MinecraftDependency> invalidDeps = [];
         Parallel.ForEach(_dependencies, new ParallelOptions { MaxDegreeOfParallelism = fileVerificationParallelism }, dep => {
-            if (!VerifyDependency(dep, cancellationToken))
-            {
+            if (!VerifyDependency(dep, cancellationToken)) {
                 invalidDeps.Add(dep);
             }
         });
@@ -99,53 +89,7 @@ public sealed class MinecraftResourceDownloader {
             .Select(dep => new DownloadRequest(dep.Url, dep.FullPath))
             .ToList();
 
-        int currentCount = 0;
-        double speed = 0;
-        int totalCount = downloadItems.Count;
-
-        var groupRequest = new GroupDownloadRequest(downloadItems);
-        groupRequest.DownloadSpeedChanged += arg => speed = arg;
-
-        groupRequest.SingleRequestCompleted += (request, result) => {
-            Interlocked.Increment(ref currentCount);
-            ProgressChanged?.Invoke(this, new ResourceDownloadProgressChangedEventArgs
-            {
-                Speed = speed,
-                TotalCount = totalCount,
-                CompletedCount = currentCount,
-            });
-        };
-
-        // 增加下载失败的重试机制
-        GroupDownloadResult downloadResult = await _downloader.DownloadFilesAsync(groupRequest, cancellationToken);
-        if (downloadResult.Type == DownloadResultType.Failed && downloadResult.Failed.Count > 0)
-        {
-            var failedItems = downloadResult.Failed.Keys
-                .Select(req => new DownloadRequest(req.Url, req.FileInfo.FullName))
-                .ToList();
-
-            var retryRequest = new GroupDownloadRequest(failedItems);
-            retryRequest.DownloadSpeedChanged += arg => speed = arg;
-
-            retryRequest.SingleRequestCompleted += (request, result) => {
-                Interlocked.Increment(ref currentCount);
-                ProgressChanged?.Invoke(this, new ResourceDownloadProgressChangedEventArgs
-                {
-                    Speed = speed,
-                    TotalCount = totalCount,
-                    CompletedCount = currentCount,
-                });
-            };
-
-            // 重试下载失败的文件
-            var retryResult = await _downloader.DownloadFilesAsync(retryRequest, cancellationToken);
-            if (retryResult.Type == DownloadResultType.Failed)
-            {
-                throw new Exception("Some dependencies failed to download after retrying.");
-            }
-        }
-
-        return downloadResult;
+        await _downloader.DownloadManyAsync(downloadItems, cancellationToken);
     }
 
     #region Privates
@@ -162,7 +106,12 @@ public sealed class MinecraftResourceDownloader {
         bool VerifySha1() {
             using var fileStream = File.OpenRead(dep.FullPath);
             byte[] sha1Bytes = SHA1.HashData(fileStream);
-            string sha1Str = BitConverter.ToString(sha1Bytes).Replace("-", string.Empty).ToLower();
+
+#if NET9_0_OR_GREATER
+            string sha1Str = Convert.ToHexStringLower(sha1Bytes);
+#else
+            string sha1Str = BitConverter.ToString(sha1Bytes).Replace("-", string.Empty).ToLowerInvariant();
+#endif
 
             return sha1Str == verifiableDependency.Sha1;
         }

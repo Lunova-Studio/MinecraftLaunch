@@ -8,8 +8,8 @@ public class AssstIndex : MinecraftDependency, IDownloadDependency, IVerifiableD
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("url")] public string Url { get; set; }
     [JsonPropertyName("sha1")] public string Sha1 { get; set; }
+    [JsonPropertyName("size")] public long? Size { get; set; }
 
-    [JsonIgnore] long? IVerifiableDependency.Size => throw new NotImplementedException();
     [JsonIgnore] public override string FilePath => Path.Combine("assets", "indexes", $"{Id}.json");
 }
 

@@ -61,7 +61,7 @@ public static class MinecraftEntryExtension {
         if (clientJarPath is null)
             return null;
 
-        int? size = clientArtifactNode.GetInt32("size");
+        long? size = clientArtifactNode.GetInt64("size");
         string url = clientArtifactNode.GetString("url");
         string sha1 = clientArtifactNode.GetString("sha1");
 
@@ -72,8 +72,8 @@ public static class MinecraftEntryExtension {
             MinecraftFolderPath = entry.MinecraftFolderPath,
             ClientId = Path.GetFileNameWithoutExtension(clientJarPath),
             Url = url,
-            Size = (int)size,
-            Sha1 = sha1
+            Sha1 = sha1,
+            Size = size.Value
         };
     }
 
@@ -88,7 +88,7 @@ public static class MinecraftEntryExtension {
         var assetIndex = jsonNode.Select("assetIndex")
             ?? throw new InvalidDataException("Error in parsing version.json");
 
-        // TODO: Handle nullable check in Json deserialization (requires .NET 9)
+        long size = assetIndex.GetInt64("size").Value;
         string id = assetIndex.GetString("id") ?? throw new InvalidDataException();
         string url = assetIndex.GetString("url") ?? throw new InvalidDataException();
         string sha1 = assetIndex.GetString("sha1") ?? throw new InvalidDataException();
@@ -96,6 +96,7 @@ public static class MinecraftEntryExtension {
         return new AssstIndex {
             Id = id,
             Url = url,
+            Size = size,
             Sha1 = sha1,
             MinecraftFolderPath = minecraftEntry.MinecraftFolderPath,
         };

@@ -81,12 +81,12 @@ public static partial class JsonNodeExtension {
         return node.Select(name).GetValue<uint>();
     }
 
-    public static long GetInt64(this JsonNode node) {
-        return node.GetValue<long>();
+    public static long? GetInt64(this JsonNode node) {
+        return node?.GetValue<long>();
     }
 
-    public static long GetInt64(this JsonNode node, string name) {
-        return node.Select(name).GetValue<long>();
+    public static long? GetInt64(this JsonNode node, string name) {
+        return node.Select(name)?.GetValue<long>();
     }
 
     public static bool GetBool(this JsonNode node) {

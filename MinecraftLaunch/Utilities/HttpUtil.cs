@@ -1,13 +1,10 @@
 ﻿using Flurl;
 using Flurl.Http;
-using Flurl.Http.Configuration;
-using MinecraftLaunch.Components.Parser;
-using System.Text.Json;
 
 namespace MinecraftLaunch.Utilities;
 
 public static class HttpUtil {
-    public static IFlurlClient FlurlClient { get; private set; }
+    public static IFlurlClient FlurlClient { get; internal set; }
 
     public static IFlurlRequest Request(Url url) {
         if (FlurlClient is null)
@@ -28,20 +25,5 @@ public static class HttpUtil {
             throw new InvalidOperationException("FlurlClient is not initialized.");
 
         return FlurlClient.Request(baseUrl.AppendPathSegments(paths));
-    }
-
-    public static IFlurlClient Initialize(IFlurlClient client = default) {
-        if (client is not null)
-            return FlurlClient = client;
-
-        return FlurlClient = new FlurlClient {
-            Settings = {
-                Timeout = TimeSpan.FromSeconds(100),
-                JsonSerializer = new DefaultJsonSerializer(JsonSerializerUtil.GetDefaultOptions()),
-            },
-            Headers = {
-                { "User-Agent", "MinecraftLaunch/4.0" },
-            },
-        };
     }
 }

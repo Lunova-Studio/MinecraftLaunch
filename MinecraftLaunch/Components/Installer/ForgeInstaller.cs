@@ -117,7 +117,7 @@ public sealed class ForgeInstaller : InstallerBase {
         var packageFile = new FileInfo(Path.Combine(MinecraftFolder, fileName));
         var downloadRequest = new DownloadRequest(packageUrl,packageFile.FullName);
 
-        await new FileDownloader(DownloadMirrorManager.MaxThread)
+        await new FileDownloader(DownloadManager.MaxThread)
             .DownloadFileAsync(downloadRequest, cancellationToken);
 
         ReportProgress(InstallStep.DownloadPackage, 0.45d, TaskStatus.Running, 1, 1);
@@ -209,7 +209,7 @@ public sealed class ForgeInstaller : InstallerBase {
         }
 
         var groupDownloadRequest = new GroupDownloadRequest(dependencies.OfType<IDownloadDependency>()
-            .Select(x => new DownloadRequest(DownloadMirrorManager.BmclApi.TryFindUrl(x.Url), x.FullPath)));
+            .Select(x => new DownloadRequest(DownloadManager.BmclApi.TryFindUrl(x.Url), x.FullPath)));
 
         int count = 0;
         double speed = 0;
@@ -218,7 +218,7 @@ public sealed class ForgeInstaller : InstallerBase {
             => ReportProgress(InstallStep.DownloadLibraries, ((double)count / (double)dependencies.Count).ToPercentage(0.50d, 0.70d),
                     TaskStatus.Running, dependencies.Count, Interlocked.Increment(ref count), speed, true);
 
-        var groupDownloadResult = await new FileDownloader(DownloadMirrorManager.MaxThread)
+        var groupDownloadResult = await new FileDownloader(DownloadManager.MaxThread)
             .DownloadFilesAsync(groupDownloadRequest, cancellationToken);
 
         ReportProgress(InstallStep.DownloadLibraries, 0.70d, TaskStatus.Running, dependencies.Count, count, speed, true);

@@ -1,18 +1,16 @@
-﻿using System.Collections.Frozen;
+﻿using MinecraftLaunch.Base.EventArgs;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record struct DownloadRequest {
-    public long Size { get; set; }
+public record DownloadRequest {
     public string Url { get; set; }
     public FileInfo FileInfo { get; set; }
-    public Action<long> BytesDownloaded { get; set; }
+    public long Size { get; set; } = -1;
 
-    public int MultiPartsCount { get; set; }
-    public int MultiThreadsCount { get; set; }
-    public long FileSizeThreshold { get; set; }
-    public bool IsPartialContentSupported { get; set; }
+    public Action<System.EventArgs> Completed { get; set; }
+    public Action<ResourceDownloadProgressChangedEventArgs> ProgressChanged { get; set; }
 
+    public DownloadRequest() { }
     public DownloadRequest(string url, string localPath) {
         Url = url;
         FileInfo = new(localPath);

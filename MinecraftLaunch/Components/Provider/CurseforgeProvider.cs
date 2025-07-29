@@ -13,7 +13,6 @@ using System.Web;
 namespace MinecraftLaunch.Components.Provider;
 
 public sealed class CurseforgeProvider {
-    public static string CurseforgeApiKey { get; set; } = string.Empty;
     public readonly static string CurseforgeApi = "https://api.curseforge.com/v1";
 
     public async Task<IDictionary<CurseforgeResourceFile, IEnumerable<CurseforgeResourceFile>>> GetResourceFilesByFingerprintsAsync(uint[] modFingerprints, CancellationToken cancellationToken = default) {
@@ -205,18 +204,18 @@ public sealed class CurseforgeProvider {
         CheckApiKey();
 
         return HttpUtil.Request(url)
-            .WithHeader("x-api-key", CurseforgeApiKey);
+            .WithHeader("x-api-key", DownloadManager.CurseforgeApiKey);
     }
 
     private static IFlurlRequest CreateRequest(params string[] path) {
         CheckApiKey();
 
         return HttpUtil.Request(CurseforgeApi, path)
-            .WithHeader("x-api-key", CurseforgeApiKey);
+            .WithHeader("x-api-key", DownloadManager.CurseforgeApiKey);
     }
 
     private static void CheckApiKey() {
-        if (string.IsNullOrWhiteSpace(CurseforgeApiKey))
+        if (string.IsNullOrWhiteSpace(DownloadManager.CurseforgeApiKey))
             throw new InvalidOperationException("Curseforge API key is not set.");
     }
 

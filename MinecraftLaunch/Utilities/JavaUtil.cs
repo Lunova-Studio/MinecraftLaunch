@@ -1,4 +1,7 @@
-﻿using Microsoft.Win32;
+﻿// 本段部分实现逻辑参考自 ProjBobcat 的 DeepJavaSearcher.cs
+// 仓库地址：https://github.com/Corona-Studio/ProjBobcat
+
+using Microsoft.Win32;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Utilities;
 using MinecraftLaunch.Extensions;
@@ -57,7 +60,6 @@ public static partial class JavaUtil {
             yield break;
         }
 
-        //Use by:https://github.com/Corona-Studio/ProjBobcat/blob/master/ProjBobcat/ProjBobcat/Class/Helper/DeepJavaSearcher.cs
         using var process = Process.Start(new ProcessStartInfo("whereis") {
             CreateNoWindow = true,
             UseShellExecute = false,
