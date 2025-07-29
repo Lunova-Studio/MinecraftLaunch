@@ -100,15 +100,13 @@ public sealed class VanillaInstaller : InstallerBase {
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
         var resourceDownloader = new MinecraftResourceDownloader(entry);
 
-        int count = 0;
         resourceDownloader.ProgressChanged += (_, x)
-            => ReportProgress(InstallStep.DownloadLibraries, x.ToPercentage().ToPercentage(0.5d, 0.95d),
-                TaskStatus.Running, resourceDownloader.TotalCount,
-                    Interlocked.Increment(ref count), x.Speed, true);
+            => ReportProgress(InstallStep.DownloadLibraries, x.Percentage.ToPercentage(0.5d, 0.95d),
+                TaskStatus.Running, x.TotalCount, x.CompletedCount, x.Speed, true);
 
-        await resourceDownloader.VerifyAndDownloadDependenciesAsync(cancellationToken: cancellationToken);
-        //if (groupDownloadResult.Failed.Count > 0)
-        //    throw new InvalidOperationException("Some dependent files encountered errors during download");
+        var result = await resourceDownloader.VerifyAndDownloadDependenciesAsync(cancellationToken: cancellationToken);
+        if (result.Failed.Any())
+            throw new InvalidOperationException("Some dependent files encountered errors during download");
     }
 
     private MinecraftEntry ParseMinecraft(DirectoryInfo dir, CancellationToken cancellationToken) {

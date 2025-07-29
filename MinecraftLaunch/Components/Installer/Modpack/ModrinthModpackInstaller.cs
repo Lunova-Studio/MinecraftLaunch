@@ -97,25 +97,17 @@ public sealed class ModrinthModpackInstaller : InstallerBase {
     }
 
     private Task<GroupDownloadResult> DownloadModsAsync(IEnumerable<DownloadRequest> downloadRequests, CancellationToken cancellationToken) {
-        double speed = 0;
-        int currentCount = 0;
-        int totalCount = downloadRequests.Count();
         List<Task> downloadTasks = [];
 
         var groupRequest = new GroupDownloadRequest(downloadRequests);
 
-        groupRequest.DownloadSpeedChanged += arg => speed = arg;
-        groupRequest.SingleRequestCompleted += (request, result) => {
-            var progress = (double)Interlocked.Increment(ref currentCount) / totalCount;
-            ReportProgress(InstallStep.DownloadMods, progress.ToPercentage(0.45d, 0.7d),
-                TaskStatus.Running, totalCount, currentCount, speed, true);
+        groupRequest.ProgressChanged = args => {
+            ReportProgress(InstallStep.DownloadMods, args.Percentage.ToPercentage(0.45d, 0.7d),
+                TaskStatus.Running, args.TotalCount, args.CompletedCount, args.Speed, true);
         };
 
-        ReportProgress(InstallStep.DownloadMods, 0.45d, TaskStatus.Running,
-            totalCount, 0, 0, false);
-
-        return new FileDownloader(DownloadManager.MaxThread)
-            .DownloadFilesAsync(groupRequest, cancellationToken);
+        return new DefaultDownloader()
+            .DownloadManyAsync(groupRequest, cancellationToken);
     }
 
     private async Task ExtractModpackAsync(CancellationToken cancellationToken) {

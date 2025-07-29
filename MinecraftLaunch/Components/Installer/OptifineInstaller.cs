@@ -108,8 +108,8 @@ public sealed class OptifineInstaller : InstallerBase {
         var downloadRequest = new DownloadRequest(packageUrl,
             packageFile.FullName);
 
-        await new FileDownloader(DownloadManager.MaxThread)
-            .DownloadFileAsync(downloadRequest, cancellationToken);
+        await new DefaultDownloader()
+            .DownloadAsync(downloadRequest, cancellationToken);
 
         ReportProgress(InstallStep.DownloadPackage, 0.3d, TaskStatus.Running, 1, 1);
         return packageFile;

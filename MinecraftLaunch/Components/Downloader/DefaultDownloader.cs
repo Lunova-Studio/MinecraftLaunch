@@ -52,7 +52,7 @@ public sealed class DefaultDownloader : IDownloader {
     public async Task<DownloadResult> DownloadAsync(DownloadRequest request, CancellationToken cancellationToken = default) {
         try {
             if (request.FileInfo.Directory is { Exists: false })
-                request.FileInfo.Directory?.Delete();
+                request.FileInfo.Directory?.Create();
 
             using var response = await _httpClient
                 .GetAsync(request.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -142,7 +142,7 @@ public sealed class DefaultDownloader : IDownloader {
     private static async Task<DownloadResult> DownloadAsync(DownloadRequest request, DownloadStates states, CancellationToken cancellationToken = default) {
         try {
             if (request.FileInfo.Directory is { Exists: false })
-                request.FileInfo.Directory?.Delete();
+                request.FileInfo.Directory?.Create();
 
             using var response = await _httpClient
                 .GetAsync(request.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -151,7 +151,7 @@ public sealed class DefaultDownloader : IDownloader {
             response.EnsureSuccessStatusCode();
             await using var src = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             await using var dst = new FileStream(request.FileInfo.FullName, FileMode.Create,
-                FileAccess.Write, FileShare.None, BufferSize, useAsync: true);
+                FileAccess.Write, FileShare.ReadWrite, BufferSize, useAsync: true);
 
             await CopyStreamAsync(src, dst, states, cancellationToken)
                 .ConfigureAwait(false);

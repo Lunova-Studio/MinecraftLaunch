@@ -24,8 +24,8 @@ public record GroupDownloadRequest {
     public Action<System.EventArgs> Completed { get; set; }
     public Action<ResourceDownloadProgressChangedEventArgs> ProgressChanged { get; set; }
 
-    public Action<double> DownloadSpeedChanged { get; set; }
-    public Action<DownloadRequest, DownloadResult> SingleRequestCompleted { get; set; }
+    //public Action<double> DownloadSpeedChanged { get; set; }
+    //public Action<DownloadRequest, DownloadResult> SingleRequestCompleted { get; set; }
 
     public GroupDownloadRequest(IEnumerable<DownloadRequest> files) {
         Files = files;

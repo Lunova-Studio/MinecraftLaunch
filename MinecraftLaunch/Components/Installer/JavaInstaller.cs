@@ -104,8 +104,8 @@ public sealed class JavaInstaller{
         string fileName = Path.Combine(JavaFolder, "java-runtime-filelist.json"); // 拼接路径
         var downloadRequest = new DownloadRequest(javaUrl, fileName); // 创建下载请求
 
-        await new FileDownloader(DownloadManager.MaxThread)
-            .DownloadFileAsync(downloadRequest, cancellationToken); // 异步下载 manifest
+        await new DefaultDownloader()
+            .DownloadAsync(downloadRequest, cancellationToken); // 异步下载 manifest
 
         ReportProgress(InstallStep.DownloadPackage, 0.6d, TaskStatus.Running, 1, 1); // 汇报进度
         return new FileInfo(fileName);

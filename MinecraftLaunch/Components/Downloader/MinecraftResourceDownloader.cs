@@ -1,5 +1,4 @@
 ﻿using Flurl.Http;
-using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.EventArgs;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
@@ -29,7 +28,7 @@ public sealed class MinecraftResourceDownloader {
         _downloader = new();
     }
 
-    public async Task VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default) {
+    public async Task<GroupDownloadResult> VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default) {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileVerificationParallelism);
 
         #region 1.1 Libraries & Inherited Libraries
@@ -89,7 +88,11 @@ public sealed class MinecraftResourceDownloader {
             .Select(dep => new DownloadRequest(dep.Url, dep.FullPath))
             .ToList();
 
-        await _downloader.DownloadManyAsync(new(downloadItems), cancellationToken);
+        var groupDownloadRequest = new GroupDownloadRequest(downloadItems);
+        groupDownloadRequest.ProgressChanged += args
+            => ProgressChanged?.Invoke(this, args);
+
+        return await _downloader.DownloadManyAsync(groupDownloadRequest, cancellationToken);
     }
 
     #region Privates

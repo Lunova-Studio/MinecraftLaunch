@@ -8,11 +8,9 @@ using MinecraftLaunch.Components.Parser;
 using MinecraftLaunch.Extensions;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using System.Transactions;
 
 namespace MinecraftLaunch.Components.Installer;
 
@@ -115,10 +113,10 @@ public sealed class ForgeInstaller : InstallerBase {
                 $"-installer.jar";
 
         var packageFile = new FileInfo(Path.Combine(MinecraftFolder, fileName));
-        var downloadRequest = new DownloadRequest(packageUrl,packageFile.FullName);
+        var downloadRequest = new DownloadRequest(packageUrl, packageFile.FullName);
 
-        await new FileDownloader(DownloadManager.MaxThread)
-            .DownloadFileAsync(downloadRequest, cancellationToken);
+        await new DefaultDownloader()
+            .DownloadAsync(downloadRequest, cancellationToken);
 
         ReportProgress(InstallStep.DownloadPackage, 0.45d, TaskStatus.Running, 1, 1);
 
@@ -211,17 +209,14 @@ public sealed class ForgeInstaller : InstallerBase {
         var groupDownloadRequest = new GroupDownloadRequest(dependencies.OfType<IDownloadDependency>()
             .Select(x => new DownloadRequest(DownloadManager.BmclApi.TryFindUrl(x.Url), x.FullPath)));
 
-        int count = 0;
-        double speed = 0;
-        groupDownloadRequest.DownloadSpeedChanged += x => speed = x;
-        groupDownloadRequest.SingleRequestCompleted += (_, x)
-            => ReportProgress(InstallStep.DownloadLibraries, ((double)count / (double)dependencies.Count).ToPercentage(0.50d, 0.70d),
-                    TaskStatus.Running, dependencies.Count, Interlocked.Increment(ref count), speed, true);
+        groupDownloadRequest.ProgressChanged = args
+            => ReportProgress(InstallStep.DownloadLibraries, args.Percentage.ToPercentage(0.50d, 0.70d), 
+                    TaskStatus.Running, args.TotalCount, args.CompletedCount, args.Speed, true);
+        //=> ReportProgress(InstallStep.DownloadLibraries, ((double)count / (double)dependencies.Count).ToPercentage(0.50d, 0.70d),
+        //        TaskStatus.Running, dependencies.Count, Interlocked.Increment(ref count), speed, true);
 
-        var groupDownloadResult = await new FileDownloader(DownloadManager.MaxThread)
-            .DownloadFilesAsync(groupDownloadRequest, cancellationToken);
-
-        ReportProgress(InstallStep.DownloadLibraries, 0.70d, TaskStatus.Running, dependencies.Count, count, speed, true);
+        var groupDownloadResult = await new DefaultDownloader()
+            .DownloadManyAsync(groupDownloadRequest, cancellationToken);
 
         if (groupDownloadResult.Failed.Count() > 0)
             throw new InvalidOperationException("Some dependent files encountered errors during download");

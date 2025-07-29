@@ -167,8 +167,6 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
     }
 
     private async Task DownloadModsAsync(IEnumerable<string> asyncUrls, CancellationToken cancellationToken) {
-        double speed = 0;
-        int currentCount = 0;
         List<Task> downloadTasks = [];
         var urls = asyncUrls.ToList();
 
@@ -180,17 +178,14 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
             .Select(x => new DownloadRequest(x, Path.Combine(modsPath.FullName,
                 Path.GetFileName(x)))));
 
-        groupRequest.DownloadSpeedChanged += arg => speed = arg;
-        groupRequest.SingleRequestCompleted += (request, result) => {
-            var progress = (double)Interlocked.Increment(ref currentCount) / urls.Count;
-            ReportProgress(InstallStep.DownloadMods, progress.ToPercentage(0.6d, 0.85d),
-                TaskStatus.Running, urls.Count, currentCount, speed, true);
-        };
+        groupRequest.ProgressChanged = args =>
+            ReportProgress(InstallStep.DownloadMods, args.Percentage.ToPercentage(0.6d, 0.85d),
+                TaskStatus.Running, args.TotalCount, args.CompletedCount, args.Speed, true);
 
         ReportProgress(InstallStep.DownloadMods, 0.6d, TaskStatus.Running,
             urls.Count, 0, 0, false);
 
-        await new FileDownloader().DownloadFilesAsync(groupRequest, cancellationToken);
+        await new DefaultDownloader().DownloadManyAsync(groupRequest, cancellationToken);
     }
 
     private async Task ExtractModpackAsync(CancellationToken cancellationToken) {

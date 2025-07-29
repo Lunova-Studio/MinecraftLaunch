@@ -1,6 +1,7 @@
 ﻿using MinecraftLaunch;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Components.Downloader;
+using MinecraftLaunch.Components.Installer;
 using MinecraftLaunch.Utilities;
 using System.Diagnostics;
 using System.Text.Json.Nodes;
@@ -12,52 +13,52 @@ InitializeHelper.Initialize(settings => {
     settings.CurseForgeApiKey = "Your Curseforge API";
 });
 
-var r = Stopwatch.StartNew();
+//var r = Stopwatch.StartNew();
 
-string indexFile = @"D://GamePackage//.minecraft//assets//indexes//26.json";
-var node = JsonNode.Parse(File.ReadAllText(indexFile))!["objects"]!
-    .AsObject();
+//string indexFile = @"D://GamePackage//.minecraft//assets//indexes//26.json";
+//var node = JsonNode.Parse(File.ReadAllText(indexFile))!["objects"]!
+//    .AsObject();
 
-var downloads = node.Select(x => (Guid.NewGuid().ToString("N") + Path.GetExtension(x.Key), x.Value["size"]!.GetValue<long>(),
-    $"https://resources.download.minecraft.net/{x.Value["hash"]!.GetValue<string>()[..2]}/{x.Value["hash"]!.GetValue<string>()}"));
+//var downloads = node.Select(x => (Guid.NewGuid().ToString("N") + Path.GetExtension(x.Key), x.Value["size"]!.GetValue<long>(),
+//    $"https://resources.download.minecraft.net/{x.Value["hash"]!.GetValue<string>()[..2]}/{x.Value["hash"]!.GetValue<string>()}"));
 
-var downloader = new DefaultDownloader();
+//var downloader = new DefaultDownloader();
 
-//downloader.ProgressChanged += (s, e) => {
-//    Console.WriteLine(
-//        $"文件: {e.CompletedCount}/{e.TotalCount} - {FormatSize(e.DownloadedBytes)}/{FormatSize(e.TotalBytes)} - 进度: {e.Percentage:F2}% - 速度: {FormatSpeed(e.Speed)} - 剩余: {e.EstimatedRemaining:mm\\:ss}");
-//};
+////downloader.ProgressChanged += (s, e) => {
+////    Console.WriteLine(
+////        $"文件: {e.CompletedCount}/{e.TotalCount} - {FormatSize(e.DownloadedBytes)}/{FormatSize(e.TotalBytes)} - 进度: {e.Percentage:F2}% - 速度: {FormatSpeed(e.Speed)} - 剩余: {e.EstimatedRemaining:mm\\:ss}");
+////};
 
-var gdr = new GroupDownloadRequest(downloads.Select(x => new DownloadRequest {
-    Url = x.Item3,
-    Size = x.Item2,
-    FileInfo = new(@"C:\Users\wxysd\Desktop\temp\" + x.Item1),
-}));
+//var gdr = new GroupDownloadRequest(downloads.Select(x => new DownloadRequest {
+//    Url = x.Item3,
+//    Size = x.Item2,
+//    FileInfo = new(@"C:\Users\wxysd\Desktop\temp\" + x.Item1),
+//}));
 
-gdr.ProgressChanged = e => Console.WriteLine(
-    $"文件: {e.CompletedCount}/{e.TotalCount} - {FormatSize(e.DownloadedBytes)}/{FormatSize(e.TotalBytes)} - 进度: {e.Percentage:F2}% - 速度: {FormatSpeed(e.Speed)} - 剩余: {e.EstimatedRemaining:mm\\:ss}");
+//gdr.ProgressChanged = e => Console.WriteLine(
+//    $"文件: {e.CompletedCount}/{e.TotalCount} - {FormatSize(e.DownloadedBytes)}/{FormatSize(e.TotalBytes)} - 进度: {e.Percentage:F2}% - 速度: {FormatSpeed(e.Speed)} - 剩余: {e.EstimatedRemaining:mm\\:ss}");
 
-var rr = await downloader.DownloadManyAsync(gdr);
+//var rr = await downloader.DownloadManyAsync(gdr);
 
-r.Stop();
+//r.Stop();
 
-Console.WriteLine("全部下载完成！");
-Console.WriteLine($"共有 {rr.Failed.Count()} 个文件下载失败");
-Console.WriteLine($"总耗时：{r.Elapsed:mm\\:ss}");
-Console.ReadKey();
+//Console.WriteLine("全部下载完成！");
+//Console.WriteLine($"共有 {rr.Failed.Count()} 个文件下载失败");
+//Console.WriteLine($"总耗时：{r.Elapsed:mm\\:ss}");
+//Console.ReadKey();
 
 #region 原版安装器
 
 
-//var entry = await VanillaInstaller.EnumerableMinecraftAsync()
-//    .FirstAsync(x => x.Id == "1.20.1");
+var entry = (await VanillaInstaller.EnumerableMinecraftAsync())
+    .First(x => x.Id == "1.20.1");
 
-//var installer = VanillaInstaller.Create("C:\\Users\\wxysd\\Desktop\\总整包\\MC\\mc启动器\\LauncherX\\.minecraft", entry);
-//installer.ProgressChanged += (_, arg) =>
-//    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{FileDownloader.GetSpeedText(arg.Speed)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
+var installer = VanillaInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", entry);
+installer.ProgressChanged += (_, arg) =>
+    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{FormatSpeed(arg.Speed)} - {arg.Progress * 100:F2}%" : $"{arg.Progress * 100:F2}%")}");
 
-//var minecraft = await installer.InstallAsync();
-//Console.WriteLine(minecraft.Id);
+var minecraft = await installer.InstallAsync();
+Console.WriteLine(minecraft.Id);
 
 #endregion
 
