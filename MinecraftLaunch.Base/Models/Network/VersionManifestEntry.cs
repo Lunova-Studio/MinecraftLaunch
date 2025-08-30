@@ -12,6 +12,8 @@ public record VersionManifestEntry : IInstallEntry {
     [JsonPropertyName("releaseTime")] public DateTime ReleaseTime { get; set; }
 
     [JsonIgnore] public string McVersion => Id;
+    [JsonIgnore] public string Description => throw new NotImplementedException();
+    [JsonIgnore] public string DisplayVersion => throw new NotImplementedException();
     [JsonIgnore] public ModLoaderType ModLoaderType => throw new NotImplementedException();
 }
 

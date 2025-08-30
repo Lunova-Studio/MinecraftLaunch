@@ -74,15 +74,15 @@ var sw = Stopwatch.StartNew();
 
 #region Quilt 安装器
 
-var entry4 = (await QuiltInstaller.EnumerableQuiltAsync("1.20.1"))
-    .First();
+//var entry4 = (await QuiltInstaller.EnumerableQuiltAsync("1.20.1"))
+//    .First();
 
-var installer4 = QuiltInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", entry4);
-installer4.ProgressChanged += (_, arg) =>
-    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
+//var installer4 = QuiltInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", entry4);
+//installer4.ProgressChanged += (_, arg) =>
+//    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
 
-var minecraft4 = await installer4.InstallAsync();
-Console.WriteLine(minecraft4.Id);
+//var minecraft4 = await installer4.InstallAsync();
+//Console.WriteLine(minecraft4.Id);
 
 #endregion
 
@@ -113,35 +113,35 @@ Console.WriteLine(minecraft4.Id);
 
 #region Curseforge 整合包安装器
 
-var modpackEntry = CurseforgeModpackInstaller.ParseModpackInstallEntry(@"C:\Users\wxysd\Desktop\temp\Fabulously.Optimized-5.4.1.zip");
+//var modpackEntry = CurseforgeModpackInstaller.ParseModpackInstallEntry(@"C:\Users\wxysd\Desktop\temp\Fabulously.Optimized-5.4.1.zip");
 //var installEntrys = CurseforgeModpackInstaller.ParseModLoaderEntryByManifestAsync(modpackEntry);
 
-var cfModpackInstaller = CurseforgeModpackInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", 
-    @"C:\Users\wxysd\Desktop\temp\Fabulously.Optimized-5.4.1.zip", 
-    modpackEntry, new MinecraftParser("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft").GetMinecraft("Fabulously Optimized"));
+//var cfModpackInstaller = CurseforgeModpackInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", 
+//    @"C:\Users\wxysd\Desktop\temp\Fabulously.Optimized-5.4.1.zip", 
+//    modpackEntry, new MinecraftParser("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft").GetMinecraft("Fabulously Optimized"));
 
-cfModpackInstaller.ProgressChanged += (_, arg) =>
-    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
+//cfModpackInstaller.ProgressChanged += (_, arg) =>
+//    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
 
-var minecraft5 = await cfModpackInstaller.InstallAsync();
-Console.WriteLine(minecraft5.Id);
+//var minecraft5 = await cfModpackInstaller.InstallAsync();
+//Console.WriteLine(minecraft5.Id);
 
 #endregion
 
 #region Modrinth 整合包安装器
 
-var modpackEntry1 = ModrinthModpackInstaller.ParseModpackInstallEntry(@"C:\Users\wxysd\Desktop\temp\Zombie Invade 100 Days 2.1.mrpack");
+//var modpackEntry1 = ModrinthModpackInstaller.ParseModpackInstallEntry(@"C:\Users\wxysd\Desktop\temp\Zombie Invade 100 Days 2.1.mrpack");
 //var installerEntry1 = await ModrinthModpackInstaller.ParseModLoaderEntryAsync(modpackEntry1);
 
-var mdModpackInstaller = ModrinthModpackInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft",
-    @"C:\Users\wxysd\Desktop\temp\Zombie Invade 100 Days 2.1.mrpack", 
-    modpackEntry1, new MinecraftParser("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft").GetMinecraft("Zombie Invade 100 Days"));
+//var mdModpackInstaller = ModrinthModpackInstaller.Create("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft",
+//    @"C:\Users\wxysd\Desktop\temp\Zombie Invade 100 Days 2.1.mrpack", 
+//    modpackEntry1, new MinecraftParser("C:\\Users\\wxysd\\Desktop\\temp\\.minecraft").GetMinecraft("Zombie Invade 100 Days"));
 
-mdModpackInstaller.ProgressChanged += (_, arg) =>
-    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
+//mdModpackInstaller.ProgressChanged += (_, arg) =>
+//    Console.WriteLine($"{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
 
-var minecraft6 = await mdModpackInstaller.InstallAsync();
-Console.WriteLine(minecraft6.Id);
+//var minecraft6 = await mdModpackInstaller.InstallAsync();
+//Console.WriteLine(minecraft6.Id);
 
 #endregion
 
@@ -324,5 +324,5 @@ Console.WriteLine(minecraft6.Id);
 #endregion
 
 Console.WriteLine("Done!");
-Console.WriteLine($"总耗时：{sw.Elapsed:mm\\:ss}");
+Console.WriteLine($"总耗时：{sw.Elapsed:hh\\:mm\\:ss}");
 Console.ReadKey();

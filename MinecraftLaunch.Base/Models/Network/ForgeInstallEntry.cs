@@ -12,7 +12,13 @@ public record ForgeInstallEntry : IInstallEntry {
     [JsonPropertyName("version")] public string ForgeVersion { get; set; }
     [JsonPropertyName("modified")] public DateTime ModifiedTime { get; set; }
 
+    [JsonIgnore] public string DisplayVersion => ForgeVersion;
     [JsonIgnore] public ModLoaderType ModLoaderType => ModLoaderType.Forge;
+    [JsonIgnore] public string Description => IsNeoforge 
+        ? ForgeVersion.Contains("beta", StringComparison.OrdinalIgnoreCase) 
+        ? "Preview" 
+        : "Release"
+        : ModifiedTime.ToString();
 }
 
 [JsonSerializable(typeof(ForgeInstallEntry))]

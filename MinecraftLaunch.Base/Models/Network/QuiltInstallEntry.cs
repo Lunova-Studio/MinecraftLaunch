@@ -12,6 +12,7 @@ public record QuiltInstallEntry : IInstallEntry {
     [JsonIgnore] public string McVersion => Intermediary.Version;
     [JsonIgnore] public ModLoaderType ModLoaderType => ModLoaderType.Quilt;
     [JsonIgnore] public string DisplayVersion => $"{McVersion}-{Loader.Version}";
+    [JsonIgnore] public string Description => Loader.IsStable ? $"Release" : "Preview";
 }
 
 [JsonSerializable(typeof(QuiltInstallEntry))]

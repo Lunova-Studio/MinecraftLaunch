@@ -11,6 +11,8 @@ public record OptifineInstallEntry : IInstallEntry {
     [JsonPropertyName("mcversion")] public string McVersion { get; set; }
 
     [JsonIgnore] public ModLoaderType ModLoaderType => ModLoaderType.OptiFine;
+    [JsonIgnore] public string DisplayVersion => $"{Type}_{Patch}";
+    [JsonIgnore] public string Description => Patch.Contains("pre", StringComparison.OrdinalIgnoreCase) ? "Preview" : "Release";
 }
 
 [JsonSerializable(typeof(OptifineInstallEntry))]

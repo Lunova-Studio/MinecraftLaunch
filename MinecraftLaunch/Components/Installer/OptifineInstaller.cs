@@ -36,7 +36,7 @@ public sealed class OptifineInstaller : InstallerBase {
         };
     }
 
-    public static async Task<IEnumerable<OptifineInstallEntry>> EnumerableOptifineAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<OptifineInstallEntry>> EnumerableOptifineAsync(string mcVersion, CancellationToken cancellationToken = default) {
         string url = $"https://bmclapi2.bangbang93.com/optifine/{mcVersion}";
 
         string json = await url.GetStringAsync(cancellationToken: cancellationToken);
