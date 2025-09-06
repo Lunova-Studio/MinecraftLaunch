@@ -85,7 +85,7 @@ public sealed class MinecraftResourceDownloader {
         TotalCount = invalidDeps.Count;
         var downloadItems = invalidDeps
             .OfType<IDownloadDependency>()
-            .Select(dep => new DownloadRequest(dep.Url, dep.FullPath, dep.Size))
+            .Select(dep => new DownloadRequest(dep.Url, dep.FullPath, dep.Size ?? 0))
             .ToList();
 
         var groupDownloadRequest = new GroupDownloadRequest(downloadItems);
@@ -99,7 +99,6 @@ public sealed class MinecraftResourceDownloader {
 
     private static bool VerifyDependency(MinecraftDependency dep, CancellationToken cancellationToken = default) {
         cancellationToken.ThrowIfCancellationRequested();
-
         if (!File.Exists(dep.FullPath))
             return false;
 

@@ -2,6 +2,7 @@
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Extensions;
+using MinecraftLaunch.Utilities;
 using System.Collections.Frozen;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -91,7 +92,7 @@ public sealed class MinecraftParser {
         var clientJsonNode = JsonNode.Parse(clientJson)
             ?? throw new JsonException($"Failed to parse {clientJsonPath}");
 
-        var clientJsonObject = clientJsonNode.Deserialize(MinecraftJsonEntryContext.Default.MinecraftJsonEntry)
+        var clientJsonObject = clientJson.Deserialize(new MinecraftJsonEntryContext(JsonSerializerUtil.GetDefaultOptions()).MinecraftJsonEntry)
             ?? throw new JsonException($"Failed to deserialize {clientJsonPath} into {typeof(MinecraftJsonEntry)}");
 
         // <version> folder name

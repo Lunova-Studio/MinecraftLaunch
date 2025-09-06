@@ -6,10 +6,7 @@ using MinecraftLaunch.Components.Downloader;
 using MinecraftLaunch.Components.Parser;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Components.Installer;
 
@@ -94,11 +91,7 @@ public sealed class FabricInstaller : InstallerBase {
         if (!jsonFile.Directory!.Exists)
             jsonFile.Directory.Create();
 
-        await File.WriteAllTextAsync(jsonFile.FullName,
-            JsonNode.Parse(json)!.ToJsonString(new JsonSerializerOptions {
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            }), cancellationToken);
+        await File.WriteAllTextAsync(jsonFile.FullName, json, cancellationToken);
 
         ReportProgress(InstallStep.DownloadVersionJson, 0.45d, TaskStatus.Running, 1, 1);
         return jsonFile;
@@ -109,14 +102,12 @@ public sealed class FabricInstaller : InstallerBase {
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
 
         var resourceDownloader = new MinecraftResourceDownloader(minecraft);
-
-        int count = 0;
         resourceDownloader.ProgressChanged += (_, x)
             => ReportProgress(InstallStep.DownloadLibraries, x.ToPercentage().ToPercentage(0.5d, 0.95d),
                 TaskStatus.Running, resourceDownloader.TotalCount,
-                    Interlocked.Increment(ref count), x.Speed, true);
+                    x.CompletedCount, x.Speed, true);
 
-         await resourceDownloader.VerifyAndDownloadDependenciesAsync(cancellationToken: cancellationToken);
+        await resourceDownloader.VerifyAndDownloadDependenciesAsync(cancellationToken: cancellationToken);
 
         //if (groupDownloadResult.Failed.Count > 0)
         //    throw new InvalidOperationException("Some dependent files encountered errors during download");

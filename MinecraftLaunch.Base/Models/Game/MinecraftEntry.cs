@@ -305,7 +305,9 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
         if (libNode.MavenUrl == "https://maven.fabricmc.net/") {
             return new FabricLibrary(libNode.MavenName) {
                 MinecraftFolderPath = minecraftFolderPath,
-                IsNativeLibrary = false
+                IsNativeLibrary = false,
+                Size = libNode?.Size,
+                Sha1 = libNode?.Sha1
             };
         }
 
@@ -372,14 +374,14 @@ public class MinecraftClient : MinecraftDependency, IDownloadDependency, IVerifi
     public override string FilePath => Path.Combine("versions", ClientId, $"{ClientId}.jar");
     public required string ClientId { get; init; }
     public required string Url { get; init; }
-    public required long Size { get; init; }
+    public required long? Size { get; init; }
     long? IVerifiableDependency.Size => Size;
     public required string Sha1 { get; init; }
 }
 
 public sealed class MinecraftAsset : MinecraftDependency, IDownloadDependency, IVerifiableDependency {
     public required string Key { get; set; }
-    public required long Size { get; init; }
+    public required long? Size { get; init; }
     public required string Sha1 { get; init; }
     public string Url => $"https://resources.download.minecraft.net/{Sha1[0..2]}/{Sha1}";
     public override string FilePath => Path.Combine("assets", "objects", Sha1[0..2], Sha1);
@@ -428,7 +430,7 @@ public record Os {
 public class ForgeLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
     long? IVerifiableDependency.Size => Size;
 
-    public required long Size { get; init; }
+    public required long? Size { get; init; }
     public required string Url { get; init; }
     public required string Sha1 { get; init; }
 }
@@ -436,7 +438,7 @@ public class ForgeLibrary(string mavenName) : MinecraftLibrary(mavenName), IDown
 public sealed class VanillaLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
     long? IVerifiableDependency.Size => Size;
 
-    public required long Size { get; init; }
+    public required long? Size { get; init; }
     public required string Sha1 { get; init; }
     public string Url => $"https://libraries.minecraft.net/{GetLibraryPath().Replace("\\", "/")}";
 }
@@ -444,7 +446,7 @@ public sealed class VanillaLibrary(string mavenName) : MinecraftLibrary(mavenNam
 public sealed class NeoForgeLibrary(string mavenName) : ForgeLibrary(mavenName);
 
 public sealed class LegacyForgeLibrary(string mavenName, string url) : MinecraftLibrary(mavenName), IDownloadDependency {
-    long IDownloadDependency.Size => throw new NotSupportedException();
+    long? IDownloadDependency.Size => throw new NotSupportedException();
 
     public string Url { get; init; } = url;
     public required bool ClientRequest { get; init; }
@@ -452,20 +454,24 @@ public sealed class LegacyForgeLibrary(string mavenName, string url) : Minecraft
 
 public sealed class OptiFineLibrary(string mavenName) : MinecraftLibrary(mavenName);
 
-public sealed class FabricLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency {
-    long IDownloadDependency.Size => throw new NotSupportedException();
+public sealed class FabricLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
+    long? IVerifiableDependency.Size => Size;
 
+    public long? Size { get; set; }
+    public string Sha1 { get; set; }
     public string Url => $"https://maven.fabricmc.net/{GetLibraryPath().Replace("\\", "/")}";
 }
 
-public class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency {
-    long IDownloadDependency.Size => throw new NotSupportedException();
+public class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
+    long? IVerifiableDependency.Size => Size;
 
+    public long? Size { get; set; }
+    public string Sha1 { get; set; }
     public string Url => $"https://maven.quiltmc.org/repository/release/{GetLibraryPath().Replace("\\", "/")}";
 }
 
 public class DownloadableDependency(string mavenName, string url) : MinecraftLibrary(mavenName), IDownloadDependency {
-    long IDownloadDependency.Size => throw new NotSupportedException();
+    long? IDownloadDependency.Size => throw new NotSupportedException();
 
     public string Url { get; init; } = url;
 }

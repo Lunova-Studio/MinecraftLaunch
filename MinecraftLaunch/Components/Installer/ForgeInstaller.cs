@@ -100,12 +100,19 @@ public sealed class ForgeInstaller : InstallerBase {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadPackage, 0.30d, TaskStatus.Running, 1, 0);
 
-        string baseUrl = Entry.IsNeoforge
-            ? $"https://bmclapi2.bangbang93.com/neoforge/version/{Entry.ForgeVersion}/download/installer.jar"
-            : $"https://bmclapi2.bangbang93.com/forge/download?mcversion={Entry.McVersion}&version={Entry.ForgeVersion}&category=installer&format=jar";
+        string packageUrl;
+        if (Entry.IsNeoforge) {
+            string prefix = Entry.McVersion is "1.20.1" ? "forge" : "neoforge";
+            packageUrl = $"https://maven.neoforged.net/releases/net/neoforged/{prefix}/"
+                + Entry.ForgeVersion + $"/{prefix}-{Entry.ForgeVersion}-installer.jar";
+        } else {
+            List<string> identifiers = [Entry.McVersion, Entry.ForgeVersion];
+            string loaderVersion = string.Join('-', identifiers);
 
-        string branchParam = string.IsNullOrEmpty(Entry.Branch) ? string.Empty : $"&branch={Entry.Branch}";
-        string packageUrl = $"{baseUrl}{branchParam}";
+            packageUrl = $"https://maven.minecraftforge.net/releases/net/minecraftforge/forge/"
+                + loaderVersion + $"/forge-{loaderVersion}-installer.jar";
+        }
+
         string fileName = Entry.IsNeoforge
             ? $"neoforge-{Entry.ForgeVersion}-installer.jar"
             : $"forge-{Entry.McVersion}-{Entry.ForgeVersion}" +
@@ -212,15 +219,12 @@ public sealed class ForgeInstaller : InstallerBase {
         groupDownloadRequest.ProgressChanged = args
             => ReportProgress(InstallStep.DownloadLibraries, args.Percentage.ToPercentage(0.50d, 0.70d), 
                     TaskStatus.Running, args.TotalCount, args.CompletedCount, args.Speed, true);
-        //=> ReportProgress(InstallStep.DownloadLibraries, ((double)count / (double)dependencies.Count).ToPercentage(0.50d, 0.70d),
-        //        TaskStatus.Running, dependencies.Count, Interlocked.Increment(ref count), speed, true);
 
         var groupDownloadResult = await new DefaultDownloader()
             .DownloadManyAsync(groupDownloadRequest, cancellationToken);
 
-        if (groupDownloadResult.Failed.Count() > 0)
-            throw new InvalidOperationException("Some dependent files encountered errors during download");
-
+        //if (groupDownloadResult.Failed.Count() > 0)
+        //    throw new InvalidOperationException("Some dependent files encountered errors during download");
     }
 
     private async Task RunInstallProcessorAsync(string packageFilePath, JsonNode installProfile, MinecraftEntry entry, CancellationToken cancellationToken) {

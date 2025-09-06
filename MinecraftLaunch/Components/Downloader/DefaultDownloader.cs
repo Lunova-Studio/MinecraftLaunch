@@ -56,6 +56,7 @@ public sealed class DefaultDownloader : IDownloader {
             if (request.FileInfo.Directory is { Exists: false })
                 request.FileInfo.Directory?.Create();
 
+            await HandleRedirectAsync(request, cancellationToken).ConfigureAwait(false);
             using var response = await _httpClient
                 .GetAsync(request.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                 .ConfigureAwait(false);
@@ -85,15 +86,15 @@ public sealed class DefaultDownloader : IDownloader {
         };
 
         try {
+            await PreProbeSizesAsync(requests.Files, states, cancellationToken)
+                .ConfigureAwait(false);
+
             if (states.TotalCount is 0) {
                 return new() {
                     Failed = states.FailedRequests,
                     Type = DownloadResultType.Successful,
                 };
             }
-
-            await PreProbeSizesAsync(requests.Files, states, cancellationToken)
-                .ConfigureAwait(false);
 
             var channel = Channel.CreateBounded<DownloadRequest>(new BoundedChannelOptions(states.TotalCount) {
                 FullMode = BoundedChannelFullMode.Wait,
@@ -105,10 +106,12 @@ public sealed class DefaultDownloader : IDownloader {
             var workers = Enumerable.Range(0, DownloadManager.MaxThread).Select(_ => Task.Run(async () => {
                 await foreach (var req in channel.Reader.ReadAllAsync(cancellationToken)) {
                     try {
+                        await HandleRedirectAsync(req, cancellationToken).ConfigureAwait(false);
+
                         if (req.Size >= SegmentThreshold && await GetIsSupportsRangeAsync(req, cancellationToken).ConfigureAwait(false))
                             await DownloadWithSegmentsAsync(req, states, cancellationToken).ConfigureAwait(false);
                         else
-                            await DownloadAsync(req, states, cancellationToken).ConfigureAwait(false);
+                            await DownloadCoreAsync(req, states, cancellationToken).ConfigureAwait(false);
                     } catch (Exception) {
                         states.FailedRequests.Add(req);
                     }
@@ -140,6 +143,8 @@ public sealed class DefaultDownloader : IDownloader {
                 Failed = states.FailedRequests,
                 Type = DownloadResultType.Successful,
             };
+        } finally {
+            requests.IsDownloaded = true;
         }
 
         return new() {
@@ -169,7 +174,27 @@ public sealed class DefaultDownloader : IDownloader {
         return includePerSecond ? result + "/s" : result;
     }
 
-    private static async Task<DownloadResult> DownloadAsync(DownloadRequest request, DownloadStates states, CancellationToken cancellationToken = default) {
+    private static async Task HandleRedirectAsync(DownloadRequest request, CancellationToken cancellationToken) {
+        for (int i = 0; i < 5; i++) {
+            using var req = new HttpRequestMessage(HttpMethod.Head, request.Url);
+            var response = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            if (response.StatusCode is HttpStatusCode.Found) {
+                var redirectUrl = response.Headers.Location?.AbsoluteUri;
+                if (redirectUrl is not null) {
+                    request.Url = redirectUrl;
+                    continue;
+                }
+            }
+
+            response.EnsureSuccessStatusCode();
+            return;
+        }
+
+        throw new InvalidOperationException("Too many redirects");
+    }
+
+    private static async Task<DownloadResult> DownloadCoreAsync(DownloadRequest request, DownloadStates states, CancellationToken cancellationToken = default) {
         try {
             if (request.FileInfo.Directory is { Exists: false })
                 request.FileInfo.Directory?.Create();
@@ -220,7 +245,7 @@ public sealed class DefaultDownloader : IDownloader {
     private static async Task PreProbeSizesAsync(IEnumerable<DownloadRequest> requests, DownloadStates states, CancellationToken cancellationToken) => await Parallel.ForEachAsync(requests, new ParallelOptions {
         CancellationToken = cancellationToken
     }, async (req, token) => {
-        if (req.Size >= 0) {
+        if (req.Size > 0) {
             Interlocked.Add(ref states.TotalBytes, req.Size);
             return;
         }
@@ -281,7 +306,7 @@ public sealed class DefaultDownloader : IDownloader {
         double prevTime = 0;
 
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-        while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false)) {
+        while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false) && !request.IsDownloaded) {
             long nowBytes = Interlocked.Read(ref states.DownloadedBytes);
             if (states.TotalBytes == nowBytes && states.TotalBytes != 0)
                 break;

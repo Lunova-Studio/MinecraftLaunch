@@ -19,6 +19,8 @@ public record DownloadRequest {
 }
 
 public record GroupDownloadRequest {
+    public bool IsDownloaded { get; set; } = false;
+
     public DateTime StartTime { get; init; }
 
     public IEnumerable<DownloadRequest> Files { get; set; }

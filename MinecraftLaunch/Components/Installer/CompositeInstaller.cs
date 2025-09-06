@@ -70,7 +70,7 @@ public sealed class CompositeInstaller : InstallerBase {
             }
 
             if (entry is OptifineInstallEntry oe) {
-                SecondaryInstaller = OptifineInstaller.Create(MinecraftFolder, oe, null);
+                SecondaryInstaller = OptifineInstaller.Create(MinecraftFolder, JavaPath, oe, CustomId);
                 continue;
             }
 
