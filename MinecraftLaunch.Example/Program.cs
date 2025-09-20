@@ -1,9 +1,20 @@
-﻿using MinecraftLaunch;
+﻿using Flurl;
+using Flurl.Http;
+using MinecraftLaunch;
 using MinecraftLaunch.Base.Enums;
+using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Models.Network;
+using MinecraftLaunch.Components.Authenticator;
 using MinecraftLaunch.Components.Downloader;
 using MinecraftLaunch.Components.Installer;
+using MinecraftLaunch.Components.Logging;
+using MinecraftLaunch.Components.Parser;
+using MinecraftLaunch.Extensions;
+using MinecraftLaunch.Launch;
+using MinecraftLaunch.Utilities;
+using System;
 using System.Diagnostics;
+using System.Threading;
 
 InitializeHelper.Initialize(settings => {
     settings.MaxThread = 256;
@@ -94,22 +105,22 @@ var sw = Stopwatch.StartNew();
 
 #region 复合安装器
 
-var mcId = "1.21.8";
-var mc = (await VanillaInstaller.EnumerableMinecraftAsync())
-    .First(x => x.McVersion.Equals(mcId));
+//var mcId = "1.21.8";
+//var mc = (await VanillaInstaller.EnumerableMinecraftAsync())
+//    .First(x => x.McVersion.Equals(mcId));
 
-var ofEntry = (await OptifineInstaller.EnumerableOptifineAsync(mcId))
-    .First();
+//var forgeEntry = (await ForgeInstaller.EnumerableForgeAsync(mcId))
+//    .First();
 
-var installer5 = CompositeInstaller.Create([mc, ofEntry], "C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", "C:\\Program Files\\Microsoft\\jdk-21.0.7.6-hotspot\\bin\\javaw.exe", "OptifineMC");
-installer5.ProgressChanged += (_, arg) =>
-    Console.WriteLine($"{(arg.PrimaryStepName is InstallStep.Undefined ? "" : $"{arg.PrimaryStepName} - ")}{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
+//var installer5 = CompositeInstaller.Create([mc, forgeEntry], "C:\\Users\\wxysd\\Desktop\\temp\\.minecraft", "C:\\Program Files\\Microsoft\\jdk-21.0.7.6-hotspot\\bin\\javaw.exe", "ForgeMC");
+//installer5.ProgressChanged += (_, arg) =>
+//    Console.WriteLine($"{(arg.PrimaryStepName is InstallStep.Undefined ? "" : $"{arg.PrimaryStepName} - ")}{arg.StepName} - {arg.FinishedStepTaskCount}/{arg.TotalStepTaskCount} - {(arg.IsStepSupportSpeed ? $"{DefaultDownloader.FormatSize(arg.Speed, true)} - {arg.Progress * 100:0.00}%" : $"{arg.Progress * 100:0.00}%")}");
 
-installer5.Completed += (_, arg) =>
-    Console.WriteLine(arg.IsSuccessful ? "安装成功" : $"安装失败 - {arg.Exception}");
+//installer5.Completed += (_, arg) =>
+//    Console.WriteLine(arg.IsSuccessful ? "安装成功" : $"安装失败 - {arg.Exception}");
 
-var minecraft5 = await installer5.InstallAsync();
-Console.WriteLine(minecraft5.Id);
+//var minecraft5 = await installer5.InstallAsync();
+//Console.WriteLine(minecraft5.Id);
 
 #endregion
 
@@ -245,7 +256,7 @@ Console.WriteLine(minecraft5.Id);
 
 #region 本地游戏读取
 
-//MinecraftParser minecraftParser = @"D:\GamePackage\.minecraft";
+MinecraftParser minecraftParser = "C:\\Users\\wxysd\\Desktop\\temp\\.minecraft";
 
 //minecraftParser.GetMinecrafts().ForEach(x => {
 //    Console.WriteLine(x.Id);
@@ -271,7 +282,7 @@ Console.WriteLine(minecraft5.Id);
 
 #region 本地 Java 读取
 
-//var asyncJavas = JavaUtil.EnumerableJavaAsync();
+var asyncJavas = JavaUtil.EnumerableJavaAsync();
 //await foreach (var java in asyncJavas)
 //    Console.WriteLine(java);
 
@@ -299,7 +310,7 @@ Console.WriteLine(minecraft5.Id);
 
 #region 启动
 
-//var minecraft = minecraftParser.GetMinecraft("1.8.9-PVP");
+//var minecraft = minecraftParser.GetMinecraft("ForgeMC");
 //MinecraftRunner runner = new(new LaunchConfig {
 //    Account = new OfflineAuthenticator().Authenticate("Yang114"),
 //    MaxMemorySize = 2048,
@@ -312,12 +323,16 @@ Console.WriteLine(minecraft5.Id);
 
 //process.Started += (_, _) => Console.WriteLine("Launch successful!");
 //process.OutputLogReceived += (_, arg) => Console.WriteLine(arg.Data);
+//process.Exited += (_, arg) => {
+//    Console.WriteLine();
+//    Console.WriteLine(string.Join(Environment.NewLine, process.ArgumentList));
+//};
 
 #endregion
 
 #region 错误分析
 
-//LogAnalyzer analyzer = new(minecraftParser.GetMinecraft("1.20.1"));
+//LogAnalyzer analyzer = new(minecraft);
 //var result = analyzer.Analyze();
 //foreach (var item in result.CrashReasons) {
 //    Console.WriteLine(item);

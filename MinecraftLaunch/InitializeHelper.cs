@@ -18,8 +18,11 @@ public static class InitializeHelper {
 
         HttpUtil.FlurlClient = new FlurlClient {
             Settings = {
-                Timeout = TimeSpan.FromMinutes(1),
+                Timeout = TimeSpan.FromSeconds(15),
                 JsonSerializer = new DefaultJsonSerializer(JsonSerializerUtil.GetDefaultOptions()),
+                Redirects = {
+                    Enabled = true,
+                }
             },
             Headers = {
                 { "User-Agent", componentSettings.UserAgent },

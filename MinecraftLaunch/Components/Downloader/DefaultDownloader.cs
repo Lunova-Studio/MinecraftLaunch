@@ -1,4 +1,5 @@
-﻿using MinecraftLaunch.Base.Enums;
+﻿using Flurl.Http;
+using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.EventArgs;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Network;
@@ -8,8 +9,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Security;
-using System.Threading.Channels;
 
 namespace MinecraftLaunch.Components.Downloader;
 
@@ -156,7 +155,7 @@ public class DefaultDownloader : IDownloader {
     private static async Task<bool> ValidateRangeSupport(string url, CancellationToken cancellationToken) {
         using var rangeRequest = new HttpRequestMessage(HttpMethod.Get, url);
         rangeRequest.Headers.Range = new RangeHeaderValue(0, 0);
-        var response = await HttpUtil.FlurlClient.HttpClient.SendAsync(rangeRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+        var response = await HttpUtil.DownloaderClient.SendAsync(rangeRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
         return response.StatusCode == HttpStatusCode.PartialContent;
@@ -195,13 +194,17 @@ public class DefaultDownloader : IDownloader {
     }
 
     private static async Task<(HttpResponseMessage, string)> PrepareForDownloadAsync(string url, CancellationToken cancellationToken) {
-        using var request = new HttpRequestMessage(HttpMethod.Head, url);
-        var response = await HttpUtil.FlurlClient.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-        if (response.StatusCode == HttpStatusCode.Found && response.Headers.Location != null)
-            return await PrepareForDownloadAsync(response.Headers.Location.AbsoluteUri, cancellationToken).ConfigureAwait(false);
+        var response = await HttpUtil.FlurlClient.Request(url)
+            .AllowAnyHttpStatus()
+            .HeadAsync(HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
 
-        response.EnsureSuccessStatusCode();
-        return (response, url);
+        if (response.StatusCode == 302) // 即 302
+            return await PrepareForDownloadAsync(response.ResponseMessage.Headers.Location.AbsoluteUri, cancellationToken)
+                .ConfigureAwait(false);
+
+        response.ResponseMessage.EnsureSuccessStatusCode();
+        return (response.ResponseMessage, url);
     }
 
     private static async Task DownloadMultiPartAsync(DownloadStates states, DownloadRequest request, CancellationToken cancellationToken) {
@@ -209,7 +212,7 @@ public class DefaultDownloader : IDownloader {
         long totalSegments = (fileSize + SegmentThreshold - 1) / SegmentThreshold;
         states.TotalFragments = totalSegments;
 
-        await using var fileStream = new FileStream(states.LocalPath, FileMode.Create, FileAccess.Write, FileShare.Write);
+        await using var fileStream = new FileStream(states.LocalPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, BufferSize, true);
         fileStream.SetLength(fileSize);
 
         var tasks = new List<Task>();
@@ -221,11 +224,11 @@ public class DefaultDownloader : IDownloader {
     }
 
     private static async Task DownloadSinglePartAsync(DownloadStates states, DownloadRequest request, CancellationToken cancellationToken) {
-        using var response = await HttpUtil.FlurlClient.HttpClient.GetAsync(states.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await HttpUtil.DownloaderClient.GetAsync(states.Url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        await using var fileStream = new FileStream(states.LocalPath, FileMode.Create, FileAccess.Write, FileShare.None);
+        await using var fileStream = new FileStream(states.LocalPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite, BufferSize, true);
 
         if (states.TotalBytes is long size)
             fileStream.SetLength(size);

@@ -4,6 +4,7 @@ using Flurl.Http;
 namespace MinecraftLaunch.Utilities;
 
 public static class HttpUtil {
+    internal static HttpClient DownloaderClient { get; } = new();
     public static IFlurlClient FlurlClient { get; internal set; }
 
     public static IFlurlRequest Request(Url url) {
