@@ -346,7 +346,6 @@ public class DefaultDownloader : IDownloader {
             prevTime = nowTime;
             prevBytes = nowBytes;
 
-            Debug.WriteLine(totalBytes);
             request.ProgressChanged?.Invoke(new ResourceDownloadProgressChangedEventArgs {
                 Speed = speed,
                 EstimatedRemaining = eta,
