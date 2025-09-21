@@ -96,6 +96,11 @@ public sealed class CompositeInstaller : InstallerBase {
                 arg.Status, arg.TotalStepTaskCount, arg.FinishedStepTaskCount, InstallStep.InstallVanilla,
                     arg.Speed, arg.IsStepSupportSpeed);
 
+        VanillaInstaller.Completed += (_, arg) => {
+            if (!arg.IsSuccessful)
+                throw arg.Exception;
+        };
+
         return VanillaInstaller.InstallAsync(cancellationToken);
     }
 
@@ -108,6 +113,11 @@ public sealed class CompositeInstaller : InstallerBase {
             ReportProgress(arg.StepName, arg.Progress.ToPercentage(0.4d, 0.7d),
                 arg.Status, arg.TotalStepTaskCount, arg.FinishedStepTaskCount, InstallStep.InstallPrimaryModLoader,
                     arg.Speed, arg.IsStepSupportSpeed);
+
+        PrimaryInstaller.Completed += (_, arg) => {
+            if (!arg.IsSuccessful)
+                throw arg.Exception;
+        };
 
         return PrimaryInstaller.InstallAsync(cancellationToken);
     }
@@ -125,6 +135,11 @@ public sealed class CompositeInstaller : InstallerBase {
             ReportProgress(arg.StepName, arg.Progress.ToPercentage(0.7d, 0.9d),
                 arg.Status, arg.TotalStepTaskCount, arg.FinishedStepTaskCount, InstallStep.InstallSecondaryModLoader,
                     arg.Speed, arg.IsStepSupportSpeed);
+
+        SecondaryInstaller.Completed += (_, arg) => {
+            if (!arg.IsSuccessful)
+                throw arg.Exception;
+        };
 
         return SecondaryInstaller.InstallAsync(cancellationToken);
     }

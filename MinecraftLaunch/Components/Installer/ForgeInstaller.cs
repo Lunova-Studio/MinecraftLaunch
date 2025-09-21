@@ -274,7 +274,7 @@ public sealed class ForgeInstaller : InstallerBase {
             cancellationToken.ThrowIfCancellationRequested();
 
             processor.Args = processor.Args.Select(x => {
-                if (x.StartsWith("["))
+                if (x.StartsWith('['))
                     return Path.Combine(MinecraftFolder, "libraries", x.TrimStart('[').TrimEnd(']').FormatLibraryNameToRelativePath())
                         .ToPath();
 
