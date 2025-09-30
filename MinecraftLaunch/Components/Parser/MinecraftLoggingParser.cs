@@ -9,7 +9,7 @@ public static partial class MinecraftLoggingParser {
         SourceText = log,
         Log = GetLog(log),
         Source = GetSource(log),
-        Time = TimeRegex().IsMatch(log) ? GetLogTime(log) : DateTime.Now.ToString(),
+        Time = TimeRegex().IsMatch(log) ? GetLogTime(log) : DateTime.Now.ToString("T"),
         LogLevel = GetLogType(log) switch {
             "FATAL" => MinecraftLogLevel.Fatal,
             "ERROR" => MinecraftLogLevel.Error,
