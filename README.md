@@ -7,6 +7,10 @@
 
 ### 模块化高性能的 Minecraft 启动核心
 
+<div align="center">
+  <img src="https://file.lingke.ink/mcda/project.webp" alt="你的浏览器不支持SVG显示，此项目为 MCDA 认证优秀项目，请前往 mcdalliance.cn" height="70">
+</div>
+
 ![Star](https://img.shields.io/github/stars/Blessing-Studio/MinecraftLaunch?logo=github&label=Star&style=for-the-badge)
 ![License](https://img.shields.io/github/license/Blessing-Studio/MinecraftLaunch?logo=github&label=开源协议&style=for-the-badge&color=ff7a35)
 ![NugetVersion](https://img.shields.io/nuget/v/MinecraftLaunch?logo=nuget&label=Nuget包版本&style=for-the-badge)
