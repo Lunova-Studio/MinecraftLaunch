@@ -1,8 +1,10 @@
-﻿namespace MinecraftLaunch.Base.Interfaces;
+using MinecraftLaunch.Base.Models.Game;
+
+namespace MinecraftLaunch.Base.Interfaces;
 
 public interface IDataProcessor {
     Dictionary<string, object> Datas { get; set; }
 
-    void Handle(object data);
+    void Handle(IEnumerable<MinecraftEntry> data);
     Task SaveAsync(CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,4 @@
-﻿using MinecraftLaunch.Base.Enums;
+using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Extensions;
@@ -26,7 +26,7 @@ public sealed class MinecraftParser {
     }.ToFrozenDictionary();
 
     public DirectoryInfo Root { set; get; }
-    public static List<IDataProcessor> DataProcessors { get; } = [];
+    public static Dictionary<string, IDataProcessor> DataProcessors { get; } = [];
 
     public MinecraftParser(string root) {
         Root = new(root);
@@ -66,7 +66,7 @@ public sealed class MinecraftParser {
             } catch (Exception) { }
         }
 
-        foreach (var processor in DataProcessors) {
+        foreach (var processor in DataProcessors.Values) {
             processor.Handle(list);
             _ = processor.SaveAsync();
         }

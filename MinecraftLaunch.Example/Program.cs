@@ -341,6 +341,7 @@ var asyncJavas = JavaUtil.EnumerableJavaAsync();
 //}
 
 #endregion
+MinecraftParser.DataProcessors.Add("Default", new DefaultLauncherProfileParser());
 
 var md = minecraftParser.GetMinecrafts()
     .GroupBy(x => x.IsVanilla ? "Vanilla" : "Moded")
