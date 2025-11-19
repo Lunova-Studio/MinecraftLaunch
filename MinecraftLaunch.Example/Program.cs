@@ -1,6 +1,8 @@
 using MinecraftLaunch;
 using MinecraftLaunch.Base.Models.Game;
+using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Components.Parser;
+using MinecraftLaunch.Components.Provider;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
 using System.Diagnostics;
@@ -175,7 +177,13 @@ var sw = Stopwatch.StartNew();
 #region Curseforge API
 
 //CurseforgeProvider curseforgeProvider = new();
-//foreach (var cfResource in await curseforgeProvider.SearchResourcesAsync("JEI")) {
+//var options = new CurseforgeSearchOptions {
+//    SearchFilter = "JEI",
+//    SortOrder = SortOrder.Desc,
+//    SortField = SortField.TotalDownloads
+//};
+
+//foreach (var cfResource in await curseforgeProvider.SearchResourcesAsync(options)) {
 //    Console.WriteLine("Id： " + cfResource.Id);
 //    Console.WriteLine("ClassId： " + cfResource.ClassId);
 //    Console.WriteLine("Name： " + cfResource.Name);
@@ -189,7 +197,6 @@ var sw = Stopwatch.StartNew();
 //    Console.WriteLine("Authors： " + string.Join('，', cfResource.Authors));
 //    Console.WriteLine("Screenshots： " + string.Join('，', cfResource.Screenshots));
 //    Console.WriteLine("LatestFiles - FileName： " + string.Join('，', cfResource.LatestFiles.Select(x => x.FileName)));
-//    Console.WriteLine();
 //}
 
 //foreach (var cfResources in await curseforgeProvider.GetResourceFilesByFingerprintsAsync([568671043])) {
@@ -284,7 +291,7 @@ MinecraftParser minecraftParser = "C:\\Users\\wxysd\\Desktop\\temp\\.minecraft";
 
 #region 本地 Java 读取
 
-var asyncJavas = JavaUtil.EnumerableJavaAsync();
+//var asyncJavas = JavaUtil.EnumerableJavaAsync();
 //await foreach (var java in asyncJavas)
 //    Console.WriteLine(java);
 
@@ -343,37 +350,15 @@ var asyncJavas = JavaUtil.EnumerableJavaAsync();
 #endregion
 MinecraftParser.DataProcessors.Add("Default", new DefaultLauncherProfileParser());
 
-var md = minecraftParser.GetMinecrafts()
-    .GroupBy(x => x.IsVanilla ? "Vanilla" : "Moded")
-    .ToDictionary(x => x.Key, x1 => x1.AsEnumerable());
-
-foreach (var m in md) {
-    Console.WriteLine(m.Key);
-    foreach (var item in m.Value) {
-        Console.WriteLine($"{item.Id}");
+while (true) {
+    var md = minecraftParser.GetMinecrafts();
+    foreach (var item in md) {
+        Console.WriteLine(item.Id);
     }
-
     Console.WriteLine();
+    await Task.Delay(2000);
 }
-
-var r = md.Serialize(DM.Default.DictionaryStringIEnumerableMinecraftEntry);
-var jdm = r.Deserialize(DM.Default.DictionaryStringIEnumerableMinecraftEntry);
-
-foreach (var m in jdm) {
-    Console.WriteLine(m.Key);
-    foreach (var item in m.Value) {
-        Console.WriteLine($"{item.Id}");
-    }
-
-    Console.WriteLine();
-}
-
-Console.WriteLine("Equals:");
-Console.WriteLine($"{md.First().Value.First().Equals(jdm.Values.First().First())}");
 
 Console.WriteLine("Done!");
 Console.WriteLine($"总耗时：{sw.Elapsed:hh\\:mm\\:ss}");
 Console.ReadKey();
-
-[JsonSerializable(typeof(Dictionary<string, IEnumerable<MinecraftEntry>>))]
-partial class DM : JsonSerializerContext;

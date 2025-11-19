@@ -1,4 +1,4 @@
-﻿using MinecraftLaunch.Base.Interfaces;
+using MinecraftLaunch.Base.Interfaces;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 

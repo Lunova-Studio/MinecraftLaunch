@@ -1,4 +1,4 @@
-﻿using Flurl;
+using Flurl;
 using Flurl.Http;
 using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Network;
@@ -79,7 +79,8 @@ public sealed class CurseforgeProvider {
         int classId = 6,
         int category = 0,
         string gameVersion = null,
-        ModLoaderType modLoaderType = ModLoaderType.Any) {
+        ModLoaderType modLoaderType = ModLoaderType.Any,
+        CancellationToken cancellationToken = default) {
         var url = new Url(CurseforgeApi)
             .AppendPathSegment("mods/search")
             .SetQueryParams(new {
@@ -92,10 +93,39 @@ public sealed class CurseforgeProvider {
                 searchFilter = HttpUtility.UrlEncode(searchFilter)
             });
 
-        if (modLoaderType is not ModLoaderType.Any or ModLoaderType.Unknown)
+        if (modLoaderType != ModLoaderType.Any && modLoaderType != ModLoaderType.Unknown)
             url.SetQueryParam("modLoaderType", (int)modLoaderType);
 
-        var json = await CreateRequest(url).GetStringAsync();
+        var json = await CreateRequest(url).GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        if (jsonNode == null)
+            return [];
+
+        return jsonNode.GetEnumerable("data").Select(Parse);
+    }
+
+    public async Task<IEnumerable<CurseforgeResource>> SearchResourcesAsync(
+        CurseforgeSearchOptions searchOptions,
+        CancellationToken cancellationToken = default) {
+
+        var url = new Url(CurseforgeApi)
+            .AppendPathSegment("mods/search")
+            .SetQueryParams(new {
+                gameId = 432,
+                sortOrder = searchOptions.SortOrder is SortOrder.Desc ? "desc" : "asc",
+                categoryId = searchOptions.CategoryId,
+                sortField = searchOptions.SortField,
+                classId = searchOptions.ClassId,
+                gameVersion = searchOptions.GameVersion,
+                searchFilter = HttpUtility.UrlEncode(searchOptions.GameVersion)
+            });
+
+        var modLoaderType = searchOptions.ModLoaderType;
+        if (modLoaderType != ModLoaderType.Any && modLoaderType != ModLoaderType.Unknown)
+            url.SetQueryParam("modLoaderType", (int)modLoaderType);
+
+        var json = await CreateRequest(url).GetStringAsync(cancellationToken: cancellationToken);
         var jsonNode = json.AsNode();
 
         if (jsonNode == null)
