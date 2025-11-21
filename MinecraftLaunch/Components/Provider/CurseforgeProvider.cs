@@ -118,7 +118,7 @@ public sealed class CurseforgeProvider {
                 sortField = searchOptions.SortField,
                 classId = searchOptions.ClassId,
                 gameVersion = searchOptions.GameVersion,
-                searchFilter = HttpUtility.UrlEncode(searchOptions.GameVersion)
+                searchFilter = HttpUtility.UrlEncode(searchOptions.SearchFilter)
             });
 
         var modLoaderType = searchOptions.ModLoaderType;
