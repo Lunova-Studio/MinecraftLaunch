@@ -1,9 +1,9 @@
-﻿namespace MinecraftLaunch.Base.Enums;
+namespace MinecraftLaunch.Base.Enums;
 
 public enum ModrinthSearchIndex {
+    Follows,
     Downloads,
     Relevance,
-    Followers,
     DateUpdated,
     DatePublished
 }

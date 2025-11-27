@@ -1,9 +1,10 @@
-﻿using Flurl;
+using Flurl;
 using Flurl.Http;
 using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
+using System.Linq;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -100,20 +101,35 @@ public sealed class ModrinthProvider {
         string version = "",
         string category = "",
         string projectType = "mod",
+        ModLoaderType modLoader = ModLoaderType.Any,
         ModrinthSearchIndex index = ModrinthSearchIndex.Relevance,
         CancellationToken cancellationToken = default) {
-        var facetsList = new List<List<string>> {
-            new() { $"project_type:{projectType}" },
-        };
+        List<List<string>> facetsList = [[$"project_type:{projectType}"]];
 
         if (!string.IsNullOrEmpty(version))
             facetsList.Add([$"versions:{version}"]);
 
+        // 构建 categories
+        var categories = new List<string>();
         if (!string.IsNullOrEmpty(category))
-            facetsList.Add([$"categories:{category}"]);
+            categories.Add($"categories:{category}");
 
-        var facets = facetsList.Serialize(ModrinthProviderContext
-            .Default.ListListString);
+        if (modLoader is not ModLoaderType.Any) {
+            var loaderCategory = modLoader switch {
+                ModLoaderType.Quilt => "quilt",
+                ModLoaderType.Forge => "forge",
+                ModLoaderType.Fabric => "fabric",
+                ModLoaderType.NeoForge => "neoforge",
+                _ => throw new ArgumentOutOfRangeException(nameof(modLoader), modLoader, null)
+            };
+
+            categories.Add($"categories:{loaderCategory}");
+        }
+
+        if (categories.Count > 0)
+            facetsList.Add(categories);
+
+        var facets = facetsList.Serialize(ModrinthProviderContext.Default.ListListString);
 
         // 构建 URL
         var url = new Url(ModrinthApi)
@@ -122,23 +138,19 @@ public sealed class ModrinthProvider {
                 query = searchFilter,
                 facets,
                 index = index switch {
+                    ModrinthSearchIndex.Follows => "follows",
                     ModrinthSearchIndex.Downloads => "downloads",
                     ModrinthSearchIndex.Relevance => "relevance",
-                    ModrinthSearchIndex.Followers => "followers",
                     ModrinthSearchIndex.DateUpdated => "updated",
                     ModrinthSearchIndex.DatePublished => "newest",
                     _ => "relevance"
-                },
-
+                }
             });
 
         var request = HttpUtil.Request(url);
 
         var json = await request.GetStringAsync(cancellationToken: cancellationToken);
         var jsonNode = json.AsNode();
-
-        if (jsonNode is null)
-            return [];
 
         return jsonNode.GetEnumerable("hits").Select(x => Parse(x));
     }

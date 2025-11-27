@@ -1,4 +1,5 @@
 using MinecraftLaunch;
+using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Components.Parser;
@@ -348,16 +349,6 @@ MinecraftParser minecraftParser = "C:\\Users\\wxysd\\Desktop\\temp\\.minecraft";
 //}
 
 #endregion
-MinecraftParser.DataProcessors.Add("Default", new DefaultLauncherProfileParser());
-
-while (true) {
-    var md = minecraftParser.GetMinecrafts();
-    foreach (var item in md) {
-        Console.WriteLine(item.Id);
-    }
-    Console.WriteLine();
-    await Task.Delay(2000);
-}
 
 Console.WriteLine("Done!");
 Console.WriteLine($"总耗时：{sw.Elapsed:hh\\:mm\\:ss}");
