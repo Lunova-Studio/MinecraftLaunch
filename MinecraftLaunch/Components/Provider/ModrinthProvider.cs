@@ -15,7 +15,7 @@ namespace MinecraftLaunch.Components.Provider;
 public sealed class ModrinthProvider {
     public readonly string ModrinthApi = "https://api.modrinth.com/v2";
 
-    public async Task<IEnumerable<ModrinthResourceFile>> GetModFilesBySha1Async(
+    public async Task<IEnumerable<ModrinthResourceFile>> GetModFilesByHashAsync(
         string[] hashes,
         string version,
         ModLoaderType modLoaderType,
