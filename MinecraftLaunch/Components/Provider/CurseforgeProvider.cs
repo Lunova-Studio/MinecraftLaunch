@@ -199,6 +199,7 @@ public sealed class CurseforgeProvider {
             ClassId = node.GetInt32("classId"),
             DownloadCount = node.GetInt32("downloadCount"),
             Name = node.GetString("name"),
+            Slug = node.GetString("slug"),
             Summary = node.GetString("summary"),
             DateModified = node.GetDateTime("dateModified"),
             IconUrl = node.Select("logo").GetString("thumbnailUrl"),
@@ -209,64 +210,28 @@ public sealed class CurseforgeProvider {
             LatestFiles = node.GetEnumerable("latestFiles").Select(ParseFile),
             MinecraftVersions = node.GetEnumerable<string>("latestFilesIndexes", "gameVersion").Distinct()
         };
-
     }
 
     private static CurseforgeResourceFile ParseFile(JsonNode node) {
-        if (node is null)
-            return null;
-
-        return new CurseforgeResourceFile {
+        return node is null ? null : new CurseforgeResourceFile {
             Id = node.GetInt32("id"),
-            GameId = node.GetInt32("gameId"),
             ModId = node.GetInt32("modId"),
+            GameId = node.GetInt32("gameId"),
+            FileName = node.GetString("fileName"),
+            Published = node.GetDateTime("fileDate"),
             IsAvailable = node.GetBool("isAvailable"),
             DisplayName = node.GetString("displayName"),
-            FileName = node.GetString("fileName"),
-            ReleaseType = (FileReleaseType)node.GetInt32("releaseType"),
-            FileStatus = (CurseForgeFileStatus)node.GetInt32("fileStatus"),
-            Hashes = node.GetEnumerable("hashes").Select(j => new FileHash()
-            {
-                Value = j.GetString("value"),
-                Algo = j.GetInt32("algo") switch
-                {
-                    1 => HashAlgo.Sha1,
-                    2 => HashAlgo.Md5,
-                    _ => throw new NotImplementedException()
-                }
-            }),
-            FileDate = node.GetDateTime("fileDate"),
-            FileLength = node.GetInt64("fileLength").Value,
-            DownloadCount = node.GetInt64("downloadCount").Value,
-            FileSizeOnDisk = node.GetInt64("fileSizeOnDisk"),
+            IsServerPack = node.GetBool("isServerPack"),
             DownloadUrl = node.GetString("downloadUrl"),
+            DownloadCount = node.GetInt32("downloadCount"),
+            AlternateFileId = node.GetInt32("alternateFileId"),
+            FileFingerprint = node.GetUInt32("fileFingerprint"),
             GameVersions = node.GetEnumerable<string>("gameVersions"),
-            SortableGameVersions = node.GetEnumerable("sortableGameVersions").Select(j => new SortableGameVersion()
-            {
-                GameVersionName = j.GetString("gameVersionName"),
-                GameVersionPadded = j.GetString("gameVersionPadded"),
-                GameVersion = j.GetString("gameVersion"),
-                GameVersionReleaseDate = j.GetDateTime("gameVersionReleaseDate"),
-                GameVersionTypeId = j.GetValueOrDefault<int>("gameVersionTypeId")
-            }),
-            Dependencies = node.GetEnumerable("dependencies").Select(j => new CurseForgeFileDependency()
-            {
-                ModId = j.GetInt32("modId"),
-                RelationType = (FileRelationType)j.GetInt32("relationType")
-            }),
-            ExposeAsAlternative = node.GetValueOrDefault<bool>("exposeAsAlternative"),
-            ParentProjectFileId = node.GetValueOrDefault<int>("parentProjectFileId"),
-            AlternateFileId = node.GetValueOrDefault<int>("alternateFileId"),
-            IsServerPack = node.GetValueOrDefault<bool>("isServerPack"),
-            ServerPackFileId = node.GetValueOrDefault<int>("serverPackFileId"),
-            IsEarlyAccessContent = node.GetValueOrDefault<bool>("isEarlyAccessContent"),
-            EarlyAccessEndDate = node.GetValueOrDefault<DateTime>("earlyAccessEndDate"),
-            FileFingerprint = node.GetInt64("fileFingerprint").Value,
-            Modules = node.GetEnumerable("modules").Select(j => new FileModule()
-            {
-                Name = j.GetString("name"),
-                Fingerprint = j.GetInt64("fingerprint").Value
-            })
+            IsApproved = node.GetInt32("fileStatus") is 4,
+            FileLength = node.GetInt64("fileLength").Value,
+            ReleaseType = (FileReleaseType)node.GetInt32("releaseType"),
+            Sha1 = node.GetEnumerable("hashes").FirstOrDefault(x => x.GetInt32("algo") == 1).GetString("value"),
+            Dependencies = node.GetEnumerable("dependencies").ToDictionary(x => x.GetInt32("modId"), x => (DependencyType)x.GetInt32("relationType")),
         };
     }
 

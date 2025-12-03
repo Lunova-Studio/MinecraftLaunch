@@ -15,7 +15,7 @@ InitializeHelper.Initialize(settings => {
     settings.MaxRetryCount = 4;
     settings.IsEnableMirror = false;
     settings.IsEnableFragment = false;
-    settings.CurseForgeApiKey = "Your Curseforge API";
+    settings.CurseForgeApiKey = //"Your Curseforge API";
     settings.UserAgent = "MLTest/1.0";
 });
 
@@ -178,27 +178,49 @@ var sw = Stopwatch.StartNew();
 #region Curseforge API
 
 //CurseforgeProvider curseforgeProvider = new();
-//var options = new CurseforgeSearchOptions
-//{
+//var options = new CurseforgeSearchOptions {
 //    SearchFilter = "JEI",
 //    SortOrder = SortOrder.Desc,
 //    SortField = SortField.TotalDownloads
 //};
 
 //foreach (var cfResource in await curseforgeProvider.SearchResourcesAsync(options)) {
-//    Console.WriteLine("Id： " + cfResource.Id);
-//    Console.WriteLine("ClassId： " + cfResource.ClassId);
-//    Console.WriteLine("Name： " + cfResource.Name);
-//    Console.WriteLine("Summary： " + cfResource.Summary);
-//    Console.WriteLine("IconUrl： " + cfResource.IconUrl);
-//    Console.WriteLine("WebsiteUrl： " + cfResource.WebsiteUrl);
-//    Console.WriteLine("DownloadCount： " + cfResource.DownloadCount);
-//    Console.WriteLine("DateModified： " + cfResource.DateModified);
-//    Console.WriteLine("MinecraftVersions： " + string.Join('，', cfResource.MinecraftVersions));
-//    Console.WriteLine("Categories： " + string.Join('，', cfResource.Categories));
-//    Console.WriteLine("Authors： " + string.Join('，', cfResource.Authors));
-//    Console.WriteLine("Screenshots： " + string.Join('，', cfResource.Screenshots));
-//    Console.WriteLine("LatestFiles - FileName： " + string.Join('，', cfResource.LatestFiles.Select(x => x.FileName)));
+//    Console.WriteLine("Id：" + cfResource.Id);
+//    Console.WriteLine("ClassId：" + cfResource.ClassId);
+//    Console.WriteLine("Name：" + cfResource.Name);
+//    Console.WriteLine("Slug：" + cfResource.Slug);
+//    Console.WriteLine("Summary：" + cfResource.Summary);
+//    Console.WriteLine("IconUrl：" + cfResource.IconUrl);
+//    Console.WriteLine("WebsiteUrl：" + cfResource.WebsiteUrl);
+//    Console.WriteLine("DownloadCount：" + cfResource.DownloadCount);
+//    Console.WriteLine("DateModified：" + cfResource.DateModified);
+//    Console.WriteLine("MinecraftVersions：" + string.Join('，', cfResource.MinecraftVersions));
+//    Console.WriteLine("Categories：" + string.Join('，', cfResource.Categories));
+//    Console.WriteLine("Authors：" + string.Join('，', cfResource.Authors));
+//    Console.WriteLine("Screenshots：" + string.Join('，', cfResource.Screenshots));
+//    Console.WriteLine("LatestFiles：");
+
+//    foreach (var file in cfResource.LatestFiles) {
+//        Console.WriteLine($"\tId：{file.Id}");
+//        Console.WriteLine($"\tModId：{file.ModId}");
+//        Console.WriteLine($"\tFileName：{file.FileName}");
+//        Console.WriteLine($"\tPublished：{file.Published}");
+//        Console.WriteLine($"\tIsApproved：{file.IsApproved}");
+//        Console.WriteLine($"\tIsAvailable：{file.IsAvailable}");
+//        Console.WriteLine($"\tIsServerPack：{file.IsServerPack}");
+//        Console.WriteLine($"\tHasDependency：{file.Dependencies.Count > 0}");
+//        if(file.Dependencies.Count > 0)
+//            Console.WriteLine("\tDependencies：" + string.Join("，", file.Dependencies.Select(x => $"(ModId：{x.Key} | Type：{x.Value})")));
+
+//        Console.WriteLine($"\tReleaseType：{file.ReleaseType}");
+//        Console.WriteLine($"\tDownloadUrl：{file.DownloadUrl}");
+//        Console.WriteLine($"\tFileFingerprint：{file.FileFingerprint}");
+//        Console.WriteLine($"\tSha1：{file.Sha1}");
+//        Console.WriteLine($"\tMinecraftVersions：{string.Join('，', file.GameVersions)}");
+//        Console.WriteLine();
+//    }
+
+//    Console.WriteLine();
 //}
 
 //foreach (var cfResources in await curseforgeProvider.GetResourceFilesByFingerprintsAsync([568671043]))
