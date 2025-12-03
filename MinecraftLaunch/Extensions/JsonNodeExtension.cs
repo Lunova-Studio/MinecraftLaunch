@@ -6,6 +6,12 @@ using System.Text.RegularExpressions;
 namespace MinecraftLaunch.Extensions;
 
 public static partial class JsonNodeExtension {
+    public static TValue? GetValueOrDefault<TValue>(this JsonNode node, string propertyName) where TValue : struct
+    {
+        _ = node.TryGetValue<TValue>(propertyName, out var value);
+        return value;
+    }
+
     public static string FixJson(this string errorJson) => errorJson
         .FixJsonStringNewlines()
         .FixDuplicateEmptyKeys();

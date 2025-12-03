@@ -1,4 +1,5 @@
-﻿using MinecraftLaunch.Base.Interfaces;
+﻿using MinecraftLaunch.Base.Enums;
+using MinecraftLaunch.Base.Interfaces;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
@@ -23,25 +24,30 @@ public record ModrinthResource : IResource {
 }
 
 public record ModrinthResourceFiles {
-    public string Id { get; set; }
-    public string ChangeLog { get; set; }
-    public string SourceHash { get; set; }
-
-    public bool IsFeatured { get; set; }
-
-    public int DownloadCount { get; set; }
-
-    public DateTime Published { get; set; }
-    public IEnumerable<ModrinthResourceFile> Files { get; set; }
+    public required string Id { get; init; }
+    public required string ProjectId { get; init; }
+    public required string AuthorId { get; init; }
+    public required DateTime DatePublished { get; init; }
+    public required int Downloads { get; init; }
+    public required IEnumerable<ModrinthResourceFile> Files { get; init; }
+    public string ChangelogUrl { get; init; }
+    public string Name { get; init; }
+    public string VersionNumber { get; init; }
+    public string Changelog { get; init; }
+    public IEnumerable<ModrinthFileDependency> Dependencies { get; init; }
+    public IEnumerable<string> GameVersions { get; init; }
+    public FileReleaseType VersionType { get; init; }
+    public IEnumerable<string> Loaders { get; init; }
+    public bool Featured { get; init; }
+    public ModrinthFileStatus Status { get; init; }
+    public RequestedStatus? RequestedStatus { get; init; }
 }
 
 public record ModrinthResourceFile {
-    public string Sha1 { get; set; }
-    public string Sha512 { get; set; }
-    public string FileName { get; set; }
-    public string DownloadUrl { get; set; }
-
-    public bool IsPrimary { get; set; }
-
-    public long FileSize { get; set; }
+    public required FileHashes Hashes { get; init; }
+    public required string Url { get; init; }
+    public required string FileName { get; init; }
+    public required bool Primary { get; init; }
+    public int Size { get; init; }
+    public AdditionalFileType? FileType { get; init; }
 }

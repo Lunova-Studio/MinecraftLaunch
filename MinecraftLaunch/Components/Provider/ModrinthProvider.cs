@@ -4,7 +4,7 @@ using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
-using System.Linq;
+using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -187,20 +187,75 @@ public sealed class ModrinthProvider {
         if (node == null) return null;
 
         return new ModrinthResourceFiles {
-            Id = node.GetString("project_id"),
-            SourceHash = node.GetPropertyName(),
-            IsFeatured = node.GetBool("featured"),
-            ChangeLog = node.GetString("changelog"),
-            DownloadCount = node.GetInt32("downloads"),
-            Published = node.GetDateTime("date_published"),
-            Files = node.GetEnumerable("files").Select(x => new ModrinthResourceFile {
-                FileSize = x.GetInt64("size").Value,
-                DownloadUrl = x.GetString("url"),
-                IsPrimary = x.GetBool("primary"),
-                FileName = x.GetString("filename"),
-                Sha1 = x.Select("hashes").GetString("sha1"),
-                Sha512 = x.Select("hashes").GetString("sha512"),
-            }).Where(x => x.IsPrimary)
+            Id = node.GetString("id"),
+            ProjectId = node.GetString("project_id"),
+            AuthorId = node.GetString("author_id"),
+            DatePublished = node.GetDateTime("date_published"),
+            Downloads = node.GetInt32("downloads"),
+            ChangelogUrl = node.GetString("changelog_url"),
+            Files = node.GetEnumerable("files").Select(j => new ModrinthResourceFile()
+            {
+                Hashes = new FileHashes()
+                {
+                    Sha512 = j["hashes"].GetString("sha512"),
+                    Sha1 = j["hashes"].GetString("sha1")
+                },
+                Url = j.GetString("url"),
+                FileName = j.GetString("filename"),
+                Primary = j.GetBool("primary"),
+                Size = j.GetInt32("size"),
+                FileType = j.GetString("file_type") switch
+                {
+                    "required-resource-pack" => AdditionalFileType.RequiredResourcePack,
+                    "optional-resource-pack" => AdditionalFileType.OptionalResourcePack,
+                    _ => throw new NotImplementedException()
+                }
+            }),
+            Name = node.GetString("name"),
+            VersionNumber = node.GetString("version_number"),
+            Changelog = node.GetString("changelog"),
+            Dependencies = node.GetEnumerable("dependencies").Select(j => new ModrinthFileDependency()
+            {
+                DependencyType = j.GetString("dependency_type") switch
+                {
+                    "required" => DependencyType.Required,
+                    "optional" => DependencyType.Optional,
+                    "incompatible" => DependencyType.Incompatible,
+                    "embedded" => DependencyType.Embedded,
+                    _ => throw new NotImplementedException()
+                },
+                VersionId = j.GetString("version_id"),
+                ProjectId = j.GetString("project_id"),
+                FileName = j.GetString("file_name")
+            }),
+            GameVersions = node.GetEnumerable<string>("game_versions"),
+            VersionType = node.GetString("version_type") switch
+            {
+                "release" => FileReleaseType.Release,
+                "beta" => FileReleaseType.Beta,
+                "alpha" => FileReleaseType.Alpha,
+                _ => throw new NotImplementedException()
+            },
+            Loaders = node.GetEnumerable<string>("loaders"),
+            Featured = node.GetBool("featured"),
+            Status = node.GetString("status") switch
+            {
+                "listed" => ModrinthFileStatus.Listed,
+                "archived" => ModrinthFileStatus.Archived,
+                "draft" => ModrinthFileStatus.Draft,
+                "unlisted" => ModrinthFileStatus.Unlisted,
+                "scheduled" => ModrinthFileStatus.Scheduled,
+                "unknown" => ModrinthFileStatus.Unknown,
+                _ => throw new NotImplementedException()
+            },
+            RequestedStatus = node.GetString("requested_status") switch
+            {
+                "listed" => RequestedStatus.Listed,
+                "archived" => RequestedStatus.Archived,
+                "draft" => RequestedStatus.Draft,
+                "unlisted" => RequestedStatus.Unlisted,
+                _ => null
+            }
         };
     }
 

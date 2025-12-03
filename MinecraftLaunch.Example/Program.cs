@@ -178,7 +178,8 @@ var sw = Stopwatch.StartNew();
 #region Curseforge API
 
 //CurseforgeProvider curseforgeProvider = new();
-//var options = new CurseforgeSearchOptions {
+//var options = new CurseforgeSearchOptions
+//{
 //    SearchFilter = "JEI",
 //    SortOrder = SortOrder.Desc,
 //    SortField = SortField.TotalDownloads
@@ -200,19 +201,20 @@ var sw = Stopwatch.StartNew();
 //    Console.WriteLine("LatestFiles - FileName： " + string.Join('，', cfResource.LatestFiles.Select(x => x.FileName)));
 //}
 
-//foreach (var cfResources in await curseforgeProvider.GetResourceFilesByFingerprintsAsync([568671043])) {
+//foreach (var cfResources in await curseforgeProvider.GetResourceFilesByFingerprintsAsync([568671043]))
+//{
 //    var cfResource = cfResources.Key;
 
-//    Console.WriteLine("Id： " + cfResource.Id);
-//    Console.WriteLine("ModId： " + cfResource.ModId);
-//    Console.WriteLine("FileName： " + cfResource.FileName);
-//    Console.WriteLine("Published： " + cfResource.Published);
-//    Console.WriteLine("IsAvailable： " + cfResource.IsAvailable);
-//    Console.WriteLine("ReleaseType： " + cfResource.ReleaseType);
-//    Console.WriteLine("DownloadUrl： " + cfResource.DownloadUrl);
-//    Console.WriteLine("FileFingerprint： " + cfResource.FileFingerprint);
-//    Console.WriteLine("MinecraftVersions： " + string.Join('，', cfResource.MinecraftVersions));
-//    Console.WriteLine();
+//    //Console.WriteLine("Id： " + cfResource.Id);
+//    //Console.WriteLine("ModId： " + cfResource.ModId);
+//    //Console.WriteLine("FileName： " + cfResource.FileName);
+//    //Console.WriteLine("Published： " + cfResource.Published);
+//    //Console.WriteLine("IsAvailable： " + cfResource.IsAvailable);
+//    //Console.WriteLine("ReleaseType： " + cfResource.ReleaseType);
+//    //Console.WriteLine("DownloadUrl： " + cfResource.DownloadUrl);
+//    //Console.WriteLine("FileFingerprint： " + cfResource.FileFingerprint);
+//    //Console.WriteLine("MinecraftVersions： " + string.Join('，', cfResource.MinecraftVersions));
+//    //Console.WriteLine();
 //}
 
 #endregion
