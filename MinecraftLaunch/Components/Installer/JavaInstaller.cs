@@ -215,7 +215,7 @@ public sealed class JavaInstaller{
 
             void ReportProgressWithSpeed(double currentFileProgress = 0.0) {
                 int snap = Volatile.Read(ref completedFiles);
-                double overallProgress = 0.7 + 0.3 * Math.Min((snap + currentFileProgress) / totalFiles, 1.0);
+                double overallProgress = 0.7 + (0.3 * Math.Min((snap + currentFileProgress) / totalFiles, 1.0));
                 double speed = globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds); // Bytes/s
 
                 ReportProgress(
@@ -227,7 +227,6 @@ public sealed class JavaInstaller{
                     speed
                 );
             }
-
         }, CancellationToken.None));
     }
 
@@ -238,7 +237,6 @@ public sealed class JavaInstaller{
         foreach (var kv in failedFiles)
             Console.WriteLine($"{kv.Key} : {kv.Value} - JavaInstaller.cs:239");
     }
-
     // 最终 100%
     ReportProgress(
         InstallStep.DownloadJava,
@@ -246,8 +244,7 @@ public sealed class JavaInstaller{
         TaskStatus.Running,
         totalFiles,
         totalFiles,
-        globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds)
-    );
+        globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds));
 }
     private string GetPlatformKey() {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
