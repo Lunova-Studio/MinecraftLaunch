@@ -1,27 +1,19 @@
-﻿using Flurl.Http;
+using System.Collections.Concurrent;
+using Flurl.Http;
 using MinecraftLaunch.Base.Enums;
-using MinecraftLaunch.Base.Interfaces;
-using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Components.Downloader;
-using MinecraftLaunch.Components.Parser;
-using MinecraftLaunch.Extensions;
 using System.Diagnostics;
-using System.IO.Compression;
-using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using System.Runtime.InteropServices;
 using MinecraftLaunch.Base.EventArgs;
-
 namespace MinecraftLaunch.Components.Installer;
 
 /// <summary>
 /// 跨平台 Java 安装器
 /// </summary>
-public sealed class JavaInstaller{
-    public string JavaFolder { get; init; }
+public sealed class JavaInstaller {
+    private string JavaFolder { get; init; }
     public  string MinecraftFolder { get; init; }
 
     public event EventHandler<EventArgs> Completed;
@@ -55,13 +47,13 @@ public sealed class JavaInstaller{
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     
-    public  async Task InstallAsync(CancellationToken cancellationToken = default) {
+    public async Task InstallAsync(CancellationToken cancellationToken = default) {
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
         // 先汇报进度，避免 UI 卡死
         try {
             var javaInfo = await FetchJavaInfoAsync(cancellationToken); // 获取 Java 信息
             var javaFile = await DownloadJavaAsync(javaInfo, cancellationToken); // 异步下载
-            await ExtractJavaAsync(javaFile, cancellationToken); // 异步解压缩
+            await ExtractJavaFromManifestAsync(javaFile, cancellationToken); // 异步下载
 
             ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);// 完成
             ReportCompleted(); // 汇报完成
@@ -97,12 +89,16 @@ public sealed class JavaInstaller{
     private async Task<FileInfo> DownloadJavaAsync(JsonNode javaInfo, CancellationToken cancellationToken) {
         ReportProgress(InstallStep.DownloadPackage, 0.3d, TaskStatus.Running, 1, 0); // 汇报进度
 
-        string javaUrl = javaInfo [0] ["manifest"]?["url"]?.ToString() // [0] 代表第一个元素，[""manifest"] 代表 manifest 属性
+        var javaUrl = javaInfo [0] ["manifest"]?["url"]?.ToString() // [0] 代表第一个元素，[""manifest"] 代表 manifest 属性
             ?? javaInfo[0]["url"]?.ToString() // ["url"] 代表 url 属性
             ?? throw new InvalidOperationException("无法解析 Java manifest 下载地址"); // 意思：如果没有这个地址就报错
 
         string fileName = Path.Combine(JavaFolder, "java-runtime-filelist.json"); // 拼接路径
-        var downloadRequest = new DownloadRequest(javaUrl, fileName); // 创建下载请求
+        var downloadRequest = new DownloadRequest(javaUrl, fileName){
+            Size = long.Parse(javaInfo[0]["manifest"]["size"].ToString())
+        }; // 创建下载请求
+
+        Console.WriteLine(javaUrl);
 
         await new DefaultDownloader()
             .DownloadAsync(downloadRequest, cancellationToken); // 异步下载 manifest
@@ -110,20 +106,145 @@ public sealed class JavaInstaller{
         ReportProgress(InstallStep.DownloadPackage, 0.6d, TaskStatus.Running, 1, 1); // 汇报进度
         return new FileInfo(fileName);
     }
-
-    private async Task ExtractJavaAsync(FileInfo javaFile, CancellationToken cancellationToken) {
-        ReportProgress(InstallStep.ExtractingFiles, 0.7d, TaskStatus.Running, 1, 0); // 汇报进度
-
+    
+    private async Task ExtractJavaFromManifestAsync(FileInfo manifestFile, CancellationToken token) {
         string extractPath = Path.Combine(JavaFolder, "runtime");
-        if (!Directory.Exists(extractPath)) {
+        if (!Directory.Exists(extractPath))
             Directory.CreateDirectory(extractPath);
+    
+        var json = JsonNode.Parse(await File.ReadAllTextAsync(manifestFile.FullName, token).ConfigureAwait(false));
+        var files = json!["files"]!.AsObject();
+    
+        var entries = files.ToList();
+        int totalFiles = entries.Count;
+        int completedFiles = 0;
+    
+        // 并发数来自 DownloadManager
+        int maxConcurrentFiles = Math.Max(1, DownloadManager.MaxThread);
+    
+        int perFileTimeoutMs = 60_000; // 每文件超时 60 秒
+        int maxRetries = DownloadManager.MaxRetryCount; // 每文件最多重试次数与 DownloadManager.MaxRetryCount 保持一致
+        int baseRetryDelayMs = 1000;    // 重试间隔指数退避基数
+    
+        using var semaphore = new SemaphoreSlim(maxConcurrentFiles);
+        var failedFiles = new ConcurrentDictionary<string, string>();
+        var tasks = new List<Task>(totalFiles);
+    
+        long globalDownloadedBytes = 0;
+        var globalStopwatch = Stopwatch.StartNew();
+    
+        foreach (var kv in entries) {
+            var fileKey = kv.Key;
+            var fileNode = kv.Value!;
+    
+            tasks.Add(Task.Run(async () => {
+                await semaphore.WaitAsync(token).ConfigureAwait(false);
+                try {
+                    string filePath = Path.Combine(extractPath, fileKey);
+                    var fileInfo = fileNode.AsObject();
+    
+                    // 目录直接创建
+                    if (fileInfo["type"]?.ToString() == "directory") {
+                        Directory.CreateDirectory(filePath);
+                        Interlocked.Increment(ref completedFiles);
+                        ReportProgressWithSpeed();
+                        return;
+                    }
+    
+                    string url = fileInfo["downloads"]?["raw"]?["url"]?.ToString()
+                                 ?? throw new InvalidOperationException($"无法解析文件下载 URL: {fileKey}");
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+    
+                    var success = false;
+                    Exception lastEx = null;
+    
+                    for (var attempt = 1; attempt <= maxRetries && !token.IsCancellationRequested; attempt++) {
+                        using var singleCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        singleCts.CancelAfter(perFileTimeoutMs);
+    
+                        var req = new DownloadRequest(url, filePath);
+    
+                        Action<ResourceDownloadProgressChangedEventArgs> progressCallback = e => {
+                            double fileProgress = e.TotalBytes > 0 ? (double)e.DownloadedBytes / e.TotalBytes : 0.0;
+                            Interlocked.Exchange(ref globalDownloadedBytes, Interlocked.Read(ref globalDownloadedBytes) + e.DownloadedBytes);
+    
+                            ReportProgressWithSpeed(fileProgress);
+                        };
+    
+                        if (req.ProgressChanged == null)
+                            req.ProgressChanged = progressCallback;
+                        else {
+                            var prev = req.ProgressChanged;
+                            req.ProgressChanged = e => { 
+                                prev(e);
+                                progressCallback(e);
+                            };
+                        }
+    
+                        try {
+                            await new DefaultDownloader().DownloadAsync(req, singleCts.Token).ConfigureAwait(false);
+                            success = true;
+                            break;
+                        }
+                        catch (OperationCanceledException oce) {
+                            lastEx = oce;
+                            if (token.IsCancellationRequested) break;
+                        }
+                        catch (Exception ex) {
+                            lastEx = ex;
+                        }
+                        finally {
+                            req.ProgressChanged = null;
+                        }
+    
+                        await Task.Delay(baseRetryDelayMs * attempt, token).ConfigureAwait(false);
+                    }
+    
+                    if (!success) {
+                        var reason = lastEx?.Message ?? "Unknown";
+                        failedFiles[fileKey] = reason;
+                        Console.WriteLine($"[Java] 下载失败: {fileKey} 原因: {reason} - JavaInstaller.cs:207");
+                    }
+                }
+                finally {
+                    Interlocked.Increment(ref completedFiles);
+                    ReportProgressWithSpeed();
+                    semaphore.Release();
+                }
+    
+                void ReportProgressWithSpeed(double currentFileProgress = 0.0) {
+                    int snap = Volatile.Read(ref completedFiles);
+                    double overallProgress = 0.7 + (0.3 * Math.Min((snap + currentFileProgress) / totalFiles, 1.0));
+                    double speed = globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds); // Bytes/s
+    
+                    ReportProgress(
+                        InstallStep.DownloadJava,
+                        overallProgress,
+                        TaskStatus.Running,
+                        snap,
+                        totalFiles,
+                        speed
+                    );
+                }
+            }, CancellationToken.None));
         }
-
-        await Task.Run(() => ZipFile.ExtractToDirectory(javaFile.FullName, extractPath, true), cancellationToken);
-
-        ReportProgress(InstallStep.ExtractingFiles, 0.9d, TaskStatus.Running, 1, 1);
+    
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+    
+        if (!failedFiles.IsEmpty) {
+            Console.WriteLine("[Java] 以下文件最终失败： - JavaInstaller.cs:237");
+            foreach (var kv in failedFiles)
+                Console.WriteLine($"{kv.Key} : {kv.Value} - JavaInstaller.cs:239");
+        }
+        // 最终 100%
+        ReportProgress(
+            InstallStep.DownloadJava,
+            1.0,
+            TaskStatus.Running,
+            totalFiles,
+            totalFiles,
+            globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds));
     }
-
     private string GetPlatformKey() {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
             return RuntimeInformation.OSArchitecture == Architecture.X64 ? "windows-x64" : "windows-x86";
