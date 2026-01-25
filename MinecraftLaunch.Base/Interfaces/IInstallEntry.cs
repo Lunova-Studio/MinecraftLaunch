@@ -2,7 +2,8 @@
 
 namespace MinecraftLaunch.Base.Interfaces;
 
-public interface IInstallEntry {
+public interface IInstallEntry
+{
     /// <summary>
     /// Minecraft 的版本号，例如 "1.20.1"
     /// </summary>

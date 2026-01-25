@@ -1,6 +1,7 @@
 ﻿namespace MinecraftLaunch.Base.Models;
 
-public record ComponentSettings {
+public record ComponentSettings
+{
     public bool IsEnableMirror { get; set; }
     public bool IsEnableFragment { get; set; } = true;
 

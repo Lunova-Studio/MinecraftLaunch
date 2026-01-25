@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record ForgeInstallEntry : IInstallEntry {
+public record ForgeInstallEntry : IInstallEntry
+{
     [JsonIgnore] public bool IsNeoforge { get; set; }
     [JsonPropertyName("build")] public int Build { get; set; }
     [JsonPropertyName("branch")] public string Branch { get; set; }
@@ -14,9 +15,10 @@ public record ForgeInstallEntry : IInstallEntry {
 
     [JsonIgnore] public string DisplayVersion => ForgeVersion;
     [JsonIgnore] public ModLoaderType ModLoaderType => IsNeoforge ? ModLoaderType.NeoForge : ModLoaderType.Forge;
-    [JsonIgnore] public string Description => IsNeoforge 
-        ? ForgeVersion.Contains("beta", StringComparison.OrdinalIgnoreCase) 
-        ? "Preview" 
+    [JsonIgnore]
+    public string Description => IsNeoforge
+        ? ForgeVersion.Contains("beta", StringComparison.OrdinalIgnoreCase)
+        ? "Preview"
         : "Release"
         : ModifiedTime.ToString();
 }

@@ -1,8 +1,10 @@
 ﻿namespace MinecraftLaunch.Base.Enums;
 
-public enum InstallStep {
+public enum InstallStep
+{
     //Common
     Started,
+
     DownloadVersionJson,
     ParseMinecraft,
     DownloadLibraries,
@@ -11,12 +13,14 @@ public enum InstallStep {
 
     //Forge Optifine
     DownloadPackage,
+
     ParsePackage,
     WriteVersionJsonAndSomeDependencies,
     RunInstallProcessor,
 
     //Modpack
     ParseFiles,
+
     ParseDownloadUrls,
     DownloadMods,
     ExtractModpack,
@@ -24,12 +28,14 @@ public enum InstallStep {
 
     //Composite
     ParseInstaller,
+
     InstallVanilla,
     InstallPrimaryModLoader,
     InstallSecondaryModLoader,
 
     //Java
     FetchingMetadata,
+
     DownloadJava,
     ExtractingFiles,
 

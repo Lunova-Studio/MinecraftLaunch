@@ -1,6 +1,7 @@
 ﻿namespace MinecraftLaunch.Base.Enums;
 
-public enum MinecraftVersionType {
+public enum MinecraftVersionType
+{
     Release,
     Snapshot,
     OldBeta,

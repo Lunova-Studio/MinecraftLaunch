@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record VersionManifestEntry : IInstallEntry {
+public record VersionManifestEntry : IInstallEntry
+{
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("url")] public string Url { get; set; }
     [JsonPropertyName("type")] public string Type { get; set; }

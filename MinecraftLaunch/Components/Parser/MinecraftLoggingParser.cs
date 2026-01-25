@@ -4,13 +4,16 @@ using System.Text.RegularExpressions;
 
 namespace MinecraftLaunch.Components.Parser;
 
-public static partial class MinecraftLoggingParser {
-    public static MinecraftLogEntry Parse(string log) => new() {
+public static partial class MinecraftLoggingParser
+{
+    public static MinecraftLogEntry Parse(string log) => new()
+    {
         SourceText = log,
         Log = GetLog(log),
         Source = GetSource(log),
         Time = TimeRegex().IsMatch(log) ? GetLogTime(log) : DateTime.Now.ToString("T"),
-        LogLevel = GetLogType(log) switch {
+        LogLevel = GetLogType(log) switch
+        {
             "FATAL" => MinecraftLogLevel.Fatal,
             "ERROR" => MinecraftLogLevel.Error,
             "WARN" => MinecraftLogLevel.Warning,
@@ -22,7 +25,8 @@ public static partial class MinecraftLoggingParser {
         },
     };
 
-    public static string GetLog(string log) {
+    public static string GetLog(string log)
+    {
         var res = GetTotalPrefix(log);
         var s = log.Split(res);
         return (s.Length >= 2 ? s[1] : log).Trim();
@@ -33,14 +37,17 @@ public static partial class MinecraftLoggingParser {
     /// </summary>
     /// <param name="log"></param>
     /// <returns></returns>
-    public static string GetLogType(string log) {
+    public static string GetLogType(string log)
+    {
         //是否是堆栈信息
-        if (StackTraceRegex().IsMatch(log)) {
+        if (StackTraceRegex().IsMatch(log))
+        {
             return "STACK";
         }
 
         //是否是异常信息
-        if (ExceptionRegex().IsMatch(log)) {
+        if (ExceptionRegex().IsMatch(log))
+        {
             return "Exception";
         }
 
@@ -52,7 +59,8 @@ public static partial class MinecraftLoggingParser {
     /// </summary>
     /// <param name="log"></param>
     /// <returns></returns>
-    public static string GetSource(string log) {
+    public static string GetSource(string log)
+    {
         var content = SourceRegex()
             .Match(log)
             .Value
@@ -73,7 +81,8 @@ public static partial class MinecraftLoggingParser {
     /// </summary>
     /// <param name="log"></param>
     /// <returns></returns>
-    public static string GetLogTime(string log) {
+    public static string GetLogTime(string log)
+    {
         return TimeRegex().Match(log).Value;
     }
 
@@ -82,7 +91,8 @@ public static partial class MinecraftLoggingParser {
     /// </summary>
     /// <param name="log"></param>
     /// <returns></returns>
-    public static string GetTotalPrefix(string log) {
+    public static string GetTotalPrefix(string log)
+    {
         return TotalPrefixRegex().Match(log).Value;
     }
 
@@ -109,5 +119,5 @@ public static partial class MinecraftLoggingParser {
     [GeneratedRegex("\\[(20|21|22|23|[0-1]\\d):[0-5]\\d:[0-5]\\d\\] \\[[\\w\\W\\s]{2,}/(FATAL|ERROR|WARN|INFO|DEBUG)\\]")]
     private static partial Regex TotalPrefixRegex();
 
-    #endregion
+    #endregion Privates
 }

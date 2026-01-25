@@ -2,9 +2,12 @@ using MinecraftLaunch.Base.Enums;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record CurseforgeSearchOptions {
-    public int ClassId { get; set; } = 6; // 默认为模组类别
-    public int CategoryId { get; set; } = 0;
+public record CurseforgeSearchOptions
+{
+    public ClassId ClassId { get; set; } = ClassId.Mods;
+    public int? CategoryId { get; set; } = null;
+    public int PageSize { get; set; } = 50;
+    public int Index { get; set; } = 0;
 
     public string GameVersion { get; set; }
     public required string SearchFilter { get; set; }
@@ -14,7 +17,8 @@ public record CurseforgeSearchOptions {
     public ModLoaderType ModLoaderType { get; set; }
 }
 
-public enum SortOrder {
+public enum SortOrder
+{
     /// <summary>
     /// 升序排序
     /// </summary>
@@ -26,7 +30,8 @@ public enum SortOrder {
     Desc
 }
 
-public enum SortField {
+public enum SortField
+{
     Featured = 1,
     Popularity,
     LastUpdated,

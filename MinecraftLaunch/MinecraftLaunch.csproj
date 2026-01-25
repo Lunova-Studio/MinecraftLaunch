@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Version>4.0.6-preview13</Version>
+		<Version>4.0.6-preview14</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -13,7 +13,7 @@
 		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Authors>Lunova-Studio</Authors>
-		<LangVersion>latest</LangVersion>
+		<LangVersion>13.0</LangVersion>
 		<Title>MinecraftLaunch</Title>
 		<Nullable>disable</Nullable>
 		<GenerateDocumentationFile>False</GenerateDocumentationFile>

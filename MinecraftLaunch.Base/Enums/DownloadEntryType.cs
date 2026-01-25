@@ -1,6 +1,7 @@
 ﻿namespace MinecraftLaunch.Base.Enums;
 
-public enum DownloadEntryType {
+public enum DownloadEntryType
+{
     Jar,
     Asset,
     Library

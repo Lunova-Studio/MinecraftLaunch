@@ -1,6 +1,7 @@
 ﻿namespace MinecraftLaunch.Base.Enums;
 
-public enum MinecraftLogLevel {
+public enum MinecraftLogLevel
+{
     Fatal,
     Error,
     Warning,

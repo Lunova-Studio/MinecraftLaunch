@@ -5,23 +5,29 @@ using System.Diagnostics;
 
 namespace MinecraftLaunch.Launch;
 
-public sealed class MinecraftProcess : IDisposable {
+public sealed class MinecraftProcess : IDisposable
+{
     public Process Process { get; private set; }
     public IEnumerable<string> ArgumentList { get; init; }
     public IReadOnlyList<MinecraftLibrary> Natives { get; private set; }
     public nint MainWindowHandle => Process.MainWindowHandle;
 
     public event EventHandler Started;
+
     public event EventHandler<EventArgs> Exited;
+
     public event EventHandler<LogReceivedEventArgs> OutputLogReceived;
 
-    public MinecraftProcess(LaunchConfig launchConfig, MinecraftEntry minecraft, IEnumerable<string> launchArgs) {
+    public MinecraftProcess(LaunchConfig launchConfig, MinecraftEntry minecraft, IEnumerable<string> launchArgs)
+    {
         ArgumentList = launchArgs;
         if (!ArgumentList.Any())
             return;
 
-        Process = new Process {
-            StartInfo = new ProcessStartInfo(launchConfig.JavaPath.JavaPath) {
+        Process = new Process
+        {
+            StartInfo = new ProcessStartInfo(launchConfig.JavaPath.JavaPath)
+            {
                 WorkingDirectory = minecraft.ToWorkingPath(launchConfig.IsEnableIndependency),
                 Arguments = string.Join(' ', launchArgs),
                 UseShellExecute = false,
@@ -38,25 +44,30 @@ public sealed class MinecraftProcess : IDisposable {
         Start();
     }
 
-    public void Start() {
+    public void Start()
+    {
         Process.Start();
         Process.BeginOutputReadLine();
         Process.BeginErrorReadLine();
         Started?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Close() {
+    public void Close()
+    {
         Process.Kill();
     }
 
     public void Dispose() => Process?.Dispose();
 
-    private void OnMinecraftProcessExited(object sender, EventArgs e) {
+    private void OnMinecraftProcessExited(object sender, EventArgs e)
+    {
         Exited?.Invoke(this, new());
     }
 
-    private void OnOutputDataReceived(object sender, DataReceivedEventArgs e) {
-        if (!string.IsNullOrEmpty(e.Data)) {
+    private void OnOutputDataReceived(object sender, DataReceivedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(e.Data))
+        {
             OutputLogReceived?.Invoke(this, new LogReceivedEventArgs(MinecraftLoggingParser.Parse(e.Data)));
         }
     }

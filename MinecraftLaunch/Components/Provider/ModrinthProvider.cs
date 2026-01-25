@@ -4,7 +4,6 @@ using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
-using System.Linq;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -12,15 +11,17 @@ using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Components.Provider;
 
-public sealed class ModrinthProvider {
+public sealed class ModrinthProvider
+{
     public readonly string ModrinthApi = "https://api.modrinth.com/v2";
 
-    public async Task<IEnumerable<ModrinthResourceFiles>> GetModFilesBySha1Async(
+    public async Task<IEnumerable<ModrinthResourceFile>> GetModFilesByHashAsync(
         string[] hashes,
         string version,
         ModLoaderType modLoaderType,
         HashType type = HashType.SHA1,
-        CancellationToken cancellationToken = default) {
+        CancellationToken cancellationToken = default)
+    {
         var url = new Url(ModrinthApi)
             .AppendPathSegments("version_files", "update");
 
@@ -46,16 +47,46 @@ public sealed class ModrinthProvider {
             .Where(x => x is not null);
     }
 
-    public async Task<ModrinthResource> SearchByProjectIdAsync(string projectId, CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<ModrinthResource>> GetFeaturedResourcesAsync(CancellationToken cancellationToken = default)
+    {
+        var request = HttpUtil.Request(ModrinthApi, "search");
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        if (jsonNode is null)
+            return [];
+
+        return jsonNode.GetEnumerable("hits").Select(x => ParseResource(x));
+    }
+
+    public async Task<IEnumerable<ModrinthResourceFile>> GetModFilesByProjectIdAsync(string projectId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(projectId);
+
+        var request = HttpUtil.Request(ModrinthApi, "project", projectId, "version");
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonArray = json.AsNode().AsArray();
+
+        if (jsonArray is null)
+            return null;
+
+        return jsonArray.Select(ParseFile);
+    }
+
+    public async Task<ModrinthResource> SearchByProjectIdAsync(string projectId, CancellationToken cancellationToken = default)
+    {
         var url = new Url(ModrinthApi)
             .AppendPathSegments("project", projectId);
 
         var request = HttpUtil.Request(url);
         var responseMessage = await request.GetStringAsync(cancellationToken: cancellationToken);
-        return Parse(responseMessage.AsNode());
+        return ParseResource(responseMessage.AsNode());
     }
 
-    public async Task<IEnumerable<ModrinthResource>> SearchByProjectIdsAsync(IEnumerable<string> projectIds, CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<ModrinthResource>> SearchByProjectIdsAsync(IEnumerable<string> projectIds, CancellationToken cancellationToken = default)
+    {
         var idsJson = projectIds.Serialize(ModrinthProviderContext.Default.IEnumerableString);
 
         var url = new Url(ModrinthApi).AppendPathSegment("projects")
@@ -65,22 +96,11 @@ public sealed class ModrinthProvider {
         var responseMessage = await request.GetStringAsync(cancellationToken: cancellationToken);
         var jsonNode = responseMessage.AsNode();
 
-        return jsonNode.GetEnumerable().Select(x => Parse(x, true));
+        return jsonNode.GetEnumerable().Select(x => ParseResource(x, true));
     }
 
-    public async Task<IEnumerable<ModrinthResource>> GetFeaturedResourcesAsync(CancellationToken cancellationToken = default) {
-        var request = HttpUtil.Request(ModrinthApi, "search");
-
-        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
-        var jsonNode = json.AsNode();
-
-        if (jsonNode is null)
-            return [];
-
-        return jsonNode.GetEnumerable("hits").Select(x => Parse(x));
-    }
-
-    public async Task<IEnumerable<ModrinthResource>> SearchByUserAsync(string user, CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<ModrinthResource>> SearchByUserAsync(string user, CancellationToken cancellationToken = default)
+    {
         var request = HttpUtil.Request(ModrinthApi, "user", user, "projects");
 
         var json = await request.GetStringAsync(cancellationToken: cancellationToken);
@@ -89,21 +109,26 @@ public sealed class ModrinthProvider {
         if (jsonNode is null)
             return [];
 
-        return jsonNode.GetEnumerable().Select(x => {
-            var resource = Parse(x, true);
+        return jsonNode.GetEnumerable().Select(x =>
+        {
+            var resource = ParseResource(x, true);
             resource.Author = user;
             return resource;
         });
     }
 
-    public async Task<IEnumerable<ModrinthResource>> SearchAsync(
+    /*
+    public async Task<ModrinthSearchResult> SearchAsync(
         string searchFilter,
         string version = "",
         string category = "",
         string projectType = "mod",
         ModLoaderType modLoader = ModLoaderType.Any,
         ModrinthSearchIndex index = ModrinthSearchIndex.Relevance,
-        CancellationToken cancellationToken = default) {
+        int limit = 10,
+        int offset = 0,
+        CancellationToken cancellationToken = default)
+    {
         List<List<string>> facetsList = [[$"project_type:{projectType}"]];
 
         if (!string.IsNullOrEmpty(version))
@@ -114,8 +139,10 @@ public sealed class ModrinthProvider {
         if (!string.IsNullOrEmpty(category))
             categories.Add($"categories:{category}");
 
-        if (modLoader is not ModLoaderType.Any) {
-            var loaderCategory = modLoader switch {
+        if (modLoader is not ModLoaderType.Any)
+        {
+            var loaderCategory = modLoader switch
+            {
                 ModLoaderType.Quilt => "quilt",
                 ModLoaderType.Forge => "forge",
                 ModLoaderType.Fabric => "fabric",
@@ -134,17 +161,21 @@ public sealed class ModrinthProvider {
         // 构建 URL
         var url = new Url(ModrinthApi)
             .AppendPathSegment("search")
-            .SetQueryParams(new {
+            .SetQueryParams(new
+            {
                 query = searchFilter,
                 facets,
-                index = index switch {
+                index = index switch
+                {
                     ModrinthSearchIndex.Follows => "follows",
                     ModrinthSearchIndex.Downloads => "downloads",
                     ModrinthSearchIndex.Relevance => "relevance",
                     ModrinthSearchIndex.DateUpdated => "updated",
                     ModrinthSearchIndex.DatePublished => "newest",
                     _ => "relevance"
-                }
+                },
+                limit,
+                offset
             });
 
         var request = HttpUtil.Request(url);
@@ -152,22 +183,117 @@ public sealed class ModrinthProvider {
         var json = await request.GetStringAsync(cancellationToken: cancellationToken);
         var jsonNode = json.AsNode();
 
-        return jsonNode.GetEnumerable("hits").Select(x => Parse(x));
+        return ParseResult(jsonNode);
+    }
+    */
+
+    public async Task<ModrinthSearchResult> SearchAsync(
+        ModrinthSearchOptions searchOptions,
+        CancellationToken cancellationToken = default)
+    {
+        List<List<string>> facetsList = [[$"project_type:{searchOptions.ProjectType}"]];
+
+        if (!string.IsNullOrEmpty(searchOptions.Version))
+            facetsList.Add([$"versions:{searchOptions.Version}"]);
+
+        // 构建 categories
+        var categories = new List<string>();
+        if (!string.IsNullOrEmpty(searchOptions.Category))
+            categories.Add($"categories:{searchOptions.Category}");
+
+        if (searchOptions.ModLoader is not ModLoaderType.Any)
+        {
+            var loaderCategory = searchOptions.ModLoader switch
+            {
+                ModLoaderType.Quilt => "quilt",
+                ModLoaderType.Forge => "forge",
+                ModLoaderType.Fabric => "fabric",
+                ModLoaderType.NeoForge => "neoforge",
+                _ => throw new ArgumentOutOfRangeException(nameof(searchOptions.ModLoader), searchOptions.ModLoader, null)
+            };
+
+            categories.Add($"categories:{loaderCategory}");
+        }
+
+        if (categories.Count > 0)
+            facetsList.Add(categories);
+
+        var facets = facetsList.Serialize(ModrinthProviderContext.Default.ListListString);
+
+        // 构建 URL
+        var url = new Url(ModrinthApi)
+            .AppendPathSegment("search")
+            .SetQueryParams(new
+            {
+                query = searchOptions.SearchFilter,
+                facets,
+                index = searchOptions.Index switch
+                {
+                    ModrinthSearchIndex.Follows => "follows",
+                    ModrinthSearchIndex.Downloads => "downloads",
+                    ModrinthSearchIndex.Relevance => "relevance",
+                    ModrinthSearchIndex.DateUpdated => "updated",
+                    ModrinthSearchIndex.DatePublished => "newest",
+                    _ => "relevance"
+                },
+                limit = searchOptions.Limit,
+                offset = searchOptions.Offset
+            });
+
+        var request = HttpUtil.Request(url);
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        return ParseResult(jsonNode);
+    }
+
+    public async Task<IEnumerable<ModrinthCategoryEntry>> GetCategories(CancellationToken cancellationToken = default)
+    {
+        var request = HttpUtil.Request(ModrinthApi, "tag", "category");
+
+        var json = await request.GetStringAsync(cancellationToken: cancellationToken);
+        var jsonNode = json.AsNode();
+
+        if (jsonNode is null)
+            return [];
+
+        return jsonNode.GetEnumerable().Select(ParseCategory);
     }
 
     #region Private
 
-    private static ModrinthResource Parse(JsonNode jsonNode, bool isDetail = false) {
-        return new ModrinthResource {
-            Id = jsonNode.GetString("id"),
-            Slug = jsonNode.GetString("slug"),
+    private static ModrinthResource ParseResource(JsonNode jsonNode, bool isDetail = false)
+    {
+        var gCategories = jsonNode.GetEnumerable<string>("categories");
+        List<string> categories = [];
+        List<ModLoaderType> loaders = [];
+        foreach (var category in gCategories)
+        {
+            if (Enum.TryParse<ModLoaderType>(category, true, out var loader))
+            {
+                loaders.Add(loader);
+            }
+            else
+            {
+                categories.Add(category);
+            }
+        }
+
+        var projectType = jsonNode.GetString("project_type");
+        var slug = jsonNode.GetString("slug");
+        return new ModrinthResource
+        {
+            Slug = slug,
             Name = jsonNode.GetString("title"),
+            ProjectId = jsonNode.GetString("project_id"),
             Author = jsonNode.GetString("author"),
             IconUrl = jsonNode.GetString("icon_url"),
+            WebsiteUrl = $"https://modrinth.com/{projectType}/{slug}",
             Summary = jsonNode.GetString("description"),
-            ProjectType = jsonNode.GetString("project_type"),
+            ProjectType = projectType,
             DownloadCount = jsonNode.GetInt32("downloads"),
-            Categories = jsonNode.GetEnumerable<string>("categories"),
+            Categories = categories,
             Screenshots = isDetail
                 ? jsonNode?.GetEnumerable<string>("gallery", "url")
                 : jsonNode?.GetEnumerable<string>("gallery"),
@@ -179,32 +305,91 @@ public sealed class ModrinthProvider {
                 : jsonNode.GetDateTime("updated"),
             DateModified = jsonNode.TryGetValue<DateTime>("date_created", out var published)
                 ? published
-                : jsonNode.GetDateTime("published")
+                : jsonNode.GetDateTime("published"),
+            Loaders = loaders
         };
     }
 
-    private static ModrinthResourceFiles ParseFile(JsonNode node) {
-        if (node == null) return null;
+    private static ModrinthCategoryEntry ParseCategory(JsonNode node)
+    {
+        return new()
+        {
+            Name = node.GetString("name"),
+            ProjectType = node.GetString("project_type")
+        };
+    }
 
-        return new ModrinthResourceFiles {
-            Id = node.GetString("project_id"),
-            SourceHash = node.GetPropertyName(),
-            IsFeatured = node.GetBool("featured"),
-            ChangeLog = node.GetString("changelog"),
-            DownloadCount = node.GetInt32("downloads"),
+    private static ModrinthSearchResult ParseResult(JsonNode node)
+    {
+        return new ModrinthSearchResult
+        {
+            Index = node.GetInt32("offset"),
+            PageSize = node.GetInt32("limit"),
+            TotalCount = node.GetInt32("total_hits"),
+            Resources = node.GetEnumerable("hits").Select(x => ParseResource(x))
+        };
+    }
+
+    private static ModrinthResourceFile ParseFile(JsonNode node)
+    {
+        var file = node.GetEnumerable("files");
+        var primaryFileNode = file.FirstOrDefault(x => x.GetBool("primary")) ?? file.FirstOrDefault();
+
+        return new()
+        {
+            VersionId = node.GetString("id"),
+            AuthorId = node.GetString("author_id"),
+            ProjectId = node.GetString("project_id"),
             Published = node.GetDateTime("date_published"),
-            Files = node.GetEnumerable("files").Select(x => new ModrinthResourceFile {
-                FileSize = x.GetInt64("size").Value,
-                DownloadUrl = x.GetString("url"),
-                IsPrimary = x.GetBool("primary"),
-                FileName = x.GetString("filename"),
-                Sha1 = x.Select("hashes").GetString("sha1"),
-                Sha512 = x.Select("hashes").GetString("sha512"),
-            }).Where(x => x.IsPrimary)
+            DownloadCount = node.GetInt64("downloads").Value,
+
+            DisplayName = node.GetString("name"),
+            ChangeLog = node.GetString("changelog"),
+            VersionNumber = node.GetString("version_number"),
+            GameVersions = node.GetEnumerable<string>("game_versions"),
+
+            DownloadUrl = primaryFileNode.GetString("url"),
+            IsPrimary = primaryFileNode.GetBool("primary"),
+            FileName = primaryFileNode.GetString("filename"),
+            FileSize = primaryFileNode.GetInt64("size").Value,
+            Sha1 = primaryFileNode.Select("hashes").GetString("sha1"),
+            Sha512 = primaryFileNode.Select("hashes").GetString("sha512"),
+
+            ReleaseType = node.GetString("version_type") switch
+            {
+                "release" => FileReleaseType.Release,
+                "beta" => FileReleaseType.Beta,
+                "alpha" => FileReleaseType.Alpha,
+                _ => throw new NotImplementedException()
+            },
+
+            Dependencies = node.GetEnumerable("dependencies").Select(x => new ModrinthFileDependency
+            {
+                FileName = x.GetString("file_name"),
+                VersionId = x.GetString("version_id"),
+                ProjectId = x.GetString("project_id"),
+                Type = x.GetString("dependency_type") switch
+                {
+                    "required" => DependencyType.Required,
+                    "optional" => DependencyType.Optional,
+                    "incompatible" => DependencyType.Incompatible,
+                    "embedded" => DependencyType.Embedded,
+                    _ => throw new NotImplementedException()
+                }
+            }),
+
+            Loaders = node.GetEnumerable<string>("loaders").Select(x => x switch
+            {
+                "fabric" => ModLoaderType.Fabric,
+                "forge" => ModLoaderType.Forge,
+                "quilt" => ModLoaderType.Quilt,
+                "neoforge" => ModLoaderType.NeoForge,
+                _ => ModLoaderType.Any
+            })
         };
     }
 
-    #endregion
+    #endregion Private
 }
 
 internal record ModrinthFilesUpdateCheckRequestPayload(string[] hashes, string[] game_versions, string[] loaders, string algorithm = "sha1");

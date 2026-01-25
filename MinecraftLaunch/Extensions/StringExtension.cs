@@ -1,17 +1,24 @@
 ﻿namespace MinecraftLaunch.Extensions;
 
-public static class StringExtension {
-    public static IEnumerable<string> GroupArguments(this IEnumerable<string> parameters) {
+public static class StringExtension
+{
+    public static IEnumerable<string> GroupArguments(this IEnumerable<string> parameters)
+    {
         List<string> group = [];
         Queue<string> queue = new(parameters);
 
-        while (queue.Count > 0) {
+        while (queue.Count > 0)
+        {
             var next = queue.Dequeue();
 
-            if (group.Count == 0) {
+            if (group.Count == 0)
+            {
                 group.Add(next);
-            } else {
-                if (group.First().StartsWith('-') && next.StartsWith('-')) {
+            }
+            else
+            {
+                if (group.First().StartsWith('-') && next.StartsWith('-'))
+                {
                     yield return string.Join(group.First().EndsWith('=') ? "" : " ", group);
                     group.Clear();
                 }
@@ -20,12 +27,14 @@ public static class StringExtension {
             }
         }
 
-        if (group.Count > 0) {
+        if (group.Count > 0)
+        {
             yield return string.Join(group.First().EndsWith('=') ? "" : " ", group);
         }
     }
 
-    public static string ReplaceFromDictionary(this string text, Dictionary<string, string> keyValuePairs) {
+    public static string ReplaceFromDictionary(this string text, Dictionary<string, string> keyValuePairs)
+    {
         string replacedText = text;
 
         foreach (var item in keyValuePairs)
@@ -34,7 +43,8 @@ public static class StringExtension {
         return replacedText;
     }
 
-    public static IEnumerable<string> FormatLibraryName(this string Name) {
+    public static IEnumerable<string> FormatLibraryName(this string Name)
+    {
         var extension = Name.Contains('@') ? Name.Split('@') : Array.Empty<string>();
         var subString = extension.Any()
             ? Name.Replace($"@{extension[1]}", string.Empty).Split(':')
@@ -51,7 +61,8 @@ public static class StringExtension {
         else yield return $"{subString[1]}-{subString[2]}{(subString.Length > 3 ? $"-{subString[3]}" : string.Empty)}.jar".Replace("jar", extension[1]);
     }
 
-    public static string FormatLibraryNameToRelativePath(this string name) {
+    public static string FormatLibraryNameToRelativePath(this string name)
+    {
         string path = string.Empty;
 
         foreach (var subPath in name.FormatLibraryName())

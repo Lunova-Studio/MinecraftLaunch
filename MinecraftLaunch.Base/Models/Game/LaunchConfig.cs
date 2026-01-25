@@ -1,9 +1,9 @@
 ﻿using MinecraftLaunch.Base.Models.Authentication;
-using System.Diagnostics.CodeAnalysis;
 
 namespace MinecraftLaunch.Base.Models.Game;
 
-public record LaunchConfig {
+public record LaunchConfig
+{
     public Account Account { get; set; }
 
     public bool IsFullscreen { get; set; }
@@ -23,7 +23,8 @@ public record LaunchConfig {
     public IEnumerable<string> JvmArguments { get; set; } = [];
 }
 
-public record ServerInfo {
+public record ServerInfo
+{
     public int Port { get; set; } = 25565;
     public string Address { get; set; }
 }

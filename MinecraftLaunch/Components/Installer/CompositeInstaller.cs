@@ -7,7 +7,8 @@ using MinecraftLaunch.Extensions;
 
 namespace MinecraftLaunch.Components.Installer;
 
-public sealed class CompositeInstaller : InstallerBase {
+public sealed class CompositeInstaller : InstallerBase
+{
     public string JavaPath { get; init; }
     public string CustomId { get; init; }
     public override string MinecraftFolder { get; init; }
@@ -19,8 +20,10 @@ public sealed class CompositeInstaller : InstallerBase {
     internal InstallerBase SecondaryInstaller { get; set; }
     internal VanillaInstaller VanillaInstaller { get; set; }
 
-    public static CompositeInstaller Create(IEnumerable<IInstallEntry> installEntries, string mcFolder, string javaPath = default, string customId = default) {
-        return new CompositeInstaller {
+    public static CompositeInstaller Create(IEnumerable<IInstallEntry> installEntries, string mcFolder, string javaPath = default, string customId = default)
+    {
+        return new CompositeInstaller
+        {
             JavaPath = javaPath,
             CustomId = customId,
             MinecraftFolder = mcFolder,
@@ -28,12 +31,14 @@ public sealed class CompositeInstaller : InstallerBase {
         };
     }
 
-    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
+    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default)
+    {
         MinecraftEntry minecraft = null;
 
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
-        try {
+        try
+        {
             ParseInstaller(cancellationToken);
 
             minecraft = await InstallVanillaAsync(cancellationToken);
@@ -44,7 +49,9 @@ public sealed class CompositeInstaller : InstallerBase {
             minecraft = modifiedMinecraft;
             ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);
             ReportCompleted(true);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
         }
@@ -54,7 +61,8 @@ public sealed class CompositeInstaller : InstallerBase {
 
     #region Privates
 
-    private void ParseInstaller(CancellationToken cancellationToken) {
+    private void ParseInstaller(CancellationToken cancellationToken)
+    {
         ReportProgress(InstallStep.ParseInstaller, 0.1d, TaskStatus.Running, 1, 0);
 
         if (!InstallEntries.Any())
@@ -63,22 +71,30 @@ public sealed class CompositeInstaller : InstallerBase {
         if (InstallEntries.Count() > 3)
             throw new ArgumentOutOfRangeException();
 
-        foreach (var entry in InstallEntries) {
-            if (entry is VersionManifestEntry ve) {
+        foreach (var entry in InstallEntries)
+        {
+            if (entry is VersionManifestEntry ve)
+            {
                 VanillaInstaller = VanillaInstaller.Create(MinecraftFolder, ve);
                 continue;
             }
 
-            if (entry is OptifineInstallEntry oe) {
+            if (entry is OptifineInstallEntry oe)
+            {
                 SecondaryInstaller = OptifineInstaller.Create(MinecraftFolder, JavaPath, oe, CustomId);
                 continue;
             }
 
-            if (entry is ForgeInstallEntry fe) {
+            if (entry is ForgeInstallEntry fe)
+            {
                 PrimaryInstaller = ForgeInstaller.Create(MinecraftFolder, JavaPath, fe, CustomId);
-            } else if (entry is FabricInstallEntry fae) {
+            }
+            else if (entry is FabricInstallEntry fae)
+            {
                 PrimaryInstaller = FabricInstaller.Create(MinecraftFolder, fae, CustomId);
-            } else if (entry is QuiltInstallEntry qe) {
+            }
+            else if (entry is QuiltInstallEntry qe)
+            {
                 PrimaryInstaller = QuiltInstaller.Create(MinecraftFolder, qe, CustomId);
             }
         }
@@ -86,8 +102,10 @@ public sealed class CompositeInstaller : InstallerBase {
         ReportProgress(InstallStep.ParseInstaller, 0.2d, TaskStatus.Running, 1, 1);
     }
 
-    private Task<MinecraftEntry> InstallVanillaAsync(CancellationToken cancellationToken) {
-        if (VanillaInstaller is null) {
+    private Task<MinecraftEntry> InstallVanillaAsync(CancellationToken cancellationToken)
+    {
+        if (VanillaInstaller is null)
+        {
             throw new ArgumentNullException(nameof(VanillaInstaller));
         }
 
@@ -96,7 +114,8 @@ public sealed class CompositeInstaller : InstallerBase {
                 arg.Status, arg.TotalStepTaskCount, arg.FinishedStepTaskCount, InstallStep.InstallVanilla,
                     arg.Speed, arg.IsStepSupportSpeed);
 
-        VanillaInstaller.Completed += (_, arg) => {
+        VanillaInstaller.Completed += (_, arg) =>
+        {
             if (!arg.IsSuccessful)
                 throw arg.Exception;
         };
@@ -104,8 +123,10 @@ public sealed class CompositeInstaller : InstallerBase {
         return VanillaInstaller.InstallAsync(cancellationToken);
     }
 
-    private Task<MinecraftEntry> InstallPrimaryModLoaderAsync(MinecraftEntry entry, CancellationToken cancellationToken) {
-        if (PrimaryInstaller is null) {
+    private Task<MinecraftEntry> InstallPrimaryModLoaderAsync(MinecraftEntry entry, CancellationToken cancellationToken)
+    {
+        if (PrimaryInstaller is null)
+        {
             return Task.FromResult(entry);
         }
 
@@ -114,7 +135,8 @@ public sealed class CompositeInstaller : InstallerBase {
                 arg.Status, arg.TotalStepTaskCount, arg.FinishedStepTaskCount, InstallStep.InstallPrimaryModLoader,
                     arg.Speed, arg.IsStepSupportSpeed);
 
-        PrimaryInstaller.Completed += (_, arg) => {
+        PrimaryInstaller.Completed += (_, arg) =>
+        {
             if (!arg.IsSuccessful)
                 throw arg.Exception;
         };
@@ -122,12 +144,15 @@ public sealed class CompositeInstaller : InstallerBase {
         return PrimaryInstaller.InstallAsync(cancellationToken);
     }
 
-    private Task<MinecraftEntry> InstallSecondaryModLoaderAsync(MinecraftEntry entry, CancellationToken cancellationToken) {
-        if (SecondaryInstaller is null) {
+    private Task<MinecraftEntry> InstallSecondaryModLoaderAsync(MinecraftEntry entry, CancellationToken cancellationToken)
+    {
+        if (SecondaryInstaller is null)
+        {
             return Task.FromResult(entry);
         }
 
-        if (SecondaryInstaller is OptifineInstaller oi) {
+        if (SecondaryInstaller is OptifineInstaller oi)
+        {
             oi.Minecraft = entry;
         }
 
@@ -136,7 +161,8 @@ public sealed class CompositeInstaller : InstallerBase {
                 arg.Status, arg.TotalStepTaskCount, arg.FinishedStepTaskCount, InstallStep.InstallSecondaryModLoader,
                     arg.Speed, arg.IsStepSupportSpeed);
 
-        SecondaryInstaller.Completed += (_, arg) => {
+        SecondaryInstaller.Completed += (_, arg) =>
+        {
             if (!arg.IsSuccessful)
                 throw arg.Exception;
         };
@@ -145,8 +171,10 @@ public sealed class CompositeInstaller : InstallerBase {
     }
 
     internal void ReportProgress(InstallStep step, double progress, TaskStatus status, int totalCount, int finshedCount,
-        InstallStep primaryStep = InstallStep.Undefined, double speed = -1, bool isSupportStep = false) {
-        ProgressChanged?.Invoke(this, new CompositeInstallProgressChangedEventArgs {
+        InstallStep primaryStep = InstallStep.Undefined, double speed = -1, bool isSupportStep = false)
+    {
+        ProgressChanged?.Invoke(this, new CompositeInstallProgressChangedEventArgs
+        {
             Speed = speed,
             Status = status,
             StepName = step,
@@ -158,5 +186,5 @@ public sealed class CompositeInstaller : InstallerBase {
         });
     }
 
-    #endregion
+    #endregion Privates
 }

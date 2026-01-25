@@ -2,7 +2,8 @@
 
 namespace MinecraftLaunch.Base.Models.Game;
 
-public record LauncherProfileEntry {
+public record LauncherProfileEntry
+{
     [JsonPropertyName("clientToken")] public string ClientToken { get; set; }
     [JsonPropertyName("launcherVersion")] public LauncherVersionEntry LauncherVersion { get; set; }
     [JsonPropertyName("profiles")] public Dictionary<string, GameProfileEntry> Profiles { get; set; }
@@ -12,7 +13,8 @@ public record LauncherProfileEntry {
     public SelectedUserEntry SelectedAccount { get; set; }
 }
 
-public record GameProfileEntry {
+public record GameProfileEntry
+{
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("gameDir")] public string GameFolder { get; set; }
     [JsonPropertyName("lastVersionId")] public string LastVersionId { get; set; }
@@ -35,20 +37,22 @@ public record GameProfileEntry {
     [JsonPropertyName("resolution")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ResolutionEntry Resolution { get; set; }
-
 }
 
-public record SelectedUserEntry {
+public record SelectedUserEntry
+{
     [JsonPropertyName("account")] public string Account { get; set; }
     [JsonPropertyName("profile")] public string Profile { get; set; }
 }
 
-public record LauncherVersionEntry {
+public record LauncherVersionEntry
+{
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("format")] public int Format { get; set; }
 }
 
-public record ResolutionEntry {
+public record ResolutionEntry
+{
     [JsonIgnore] public bool IsFullScreen { get; set; }
     [JsonPropertyName("width")] public int Width { get; set; } = 854;
     [JsonPropertyName("height")] public int Height { get; set; } = 480;

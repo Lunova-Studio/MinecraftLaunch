@@ -2,7 +2,8 @@
 
 namespace MinecraftLaunch.Base.Models.Authentication.Microsoft;
 
-public record OAuth2TokenResponse {
+public record OAuth2TokenResponse
+{
     [JsonPropertyName("foci")] public string Foci { get; set; }
     [JsonPropertyName("scope")] public string Scope { get; set; }
     [JsonPropertyName("user_id")] public string UserId { get; set; }

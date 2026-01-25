@@ -7,63 +7,72 @@ using System.Text.RegularExpressions;
 
 namespace MinecraftLaunch.Components.Logging;
 
-public sealed partial class LogAnalyzer {
+public sealed partial class LogAnalyzer
+{
     public MinecraftEntry Minecraft { get; set; }
     public IReadOnlyList<string> LogFiles { get; set; }
 
-    public LogAnalyzer(MinecraftEntry minecraft, IReadOnlyList<string> logFiles = default) {
+    public LogAnalyzer(MinecraftEntry minecraft, IReadOnlyList<string> logFiles = default)
+    {
         Minecraft = minecraft;
         LogFiles = logFiles ?? [];
     }
 
-    public LogAnalyzerResult Analyze() {
+    public LogAnalyzerResult Analyze()
+    {
         var logs = GetAllLogs();
         var reasons = new List<CrashReasons>();
         var suspiciousMods = new List<string>();
 
-        foreach (var log in logs) {
+        foreach (var log in logs)
+        {
             //roughly match the crash reason
             foreach (var (key, value) in RoughCrashReasons)
                 if (log.Contains(key))
                     reasons.Add(value);
 
-            if (log.Contains("Could not reserve enough space")) {
+            if (log.Contains("Could not reserve enough space"))
+            {
                 reasons.Add(log.Contains("for 1048576KB object heap")
                     ? CrashReasons.Using32BitJavaCausedInsufficientJVMMemory
                     : CrashReasons.InsufficientMemory);
             }
 
-            if (log.Contains("Caught exception from")) {
+            if (log.Contains("Caught exception from"))
+            {
                 reasons.Add(CrashReasons.ModCausedGameCrash);
                 suspiciousMods.AddRange(FindSuspiciousModId(ModCrashIdentifier()
                     .Match(log).Value.TrimEnd('\r', '\n', ' '), log));
             }
 
-            if (log.Contains("Failed to create mod instance.")) {
+            if (log.Contains("Failed to create mod instance."))
+            {
                 reasons.Add(CrashReasons.ModInitializationFailed);
                 suspiciousMods.AddRange(FindSuspiciousModId((FailedModInstanceIdentifier1().IsMatch(log)
-                    ? FailedModInstanceIdentifier1().Match(log).Value 
+                    ? FailedModInstanceIdentifier1().Match(log).Value
                     : FailedModInstanceIdentifier2().Match(log).Value).TrimEnd('\r', '\n'), log));
             }
 
             if (MixinInjectionFailureIdentifier().IsMatch(log) ||
                 log.Contains("mixin.injection.throwables.") ||
-                log.Contains(".mixins.json] FAILED during )")) {
+                log.Contains(".mixins.json] FAILED during )"))
+            {
                 var mod = MixinFailureIdentifierRegex().Match(log).Value;
-                if(string.IsNullOrWhiteSpace(mod))
+                if (string.IsNullOrWhiteSpace(mod))
                     mod = FallbackModIdentifier().Match(log).Value;
 
-                if(string.IsNullOrWhiteSpace(mod))
+                if (string.IsNullOrWhiteSpace(mod))
                     mod = FailedDuringIdentifier().Match(log).Value;
 
-                if(string.IsNullOrWhiteSpace(mod))
+                if (string.IsNullOrWhiteSpace(mod))
                     mod = MixinCallbackFailureIdentifier().Match(log).Value;
 
                 reasons.Add(CrashReasons.ModMixinFailed);
                 suspiciousMods.AddRange(FindSuspiciousModId(mod.TrimEnd(("\r\n" + " ").ToCharArray()), log));
             }
 
-            if (log.Contains("-- MOD ")) {
+            if (log.Contains("-- MOD "))
+            {
                 var loglast = log.Split("-- MOD")
                     .LastOrDefault();
 
@@ -73,7 +82,8 @@ public sealed partial class LogAnalyzer {
             }
         }
 
-        return new LogAnalyzerResult {
+        return new LogAnalyzerResult
+        {
             Minecraft = Minecraft,
             CrashReasons = reasons.Distinct().ToList(),
             SuspiciousMods = []
@@ -147,7 +157,8 @@ public sealed partial class LogAnalyzer {
     [GeneratedRegex("(?<= in callback )[^./ ]+(?=.mixins.json:)")]
     private static partial Regex MixinCallbackFailureIdentifier();
 
-    private IEnumerable<string> GetAllLogs() {
+    private IEnumerable<string> GetAllLogs()
+    {
         ArgumentException.ThrowIfNullOrEmpty(nameof(Minecraft));
 
         List<string> logFiles = [];
@@ -161,7 +172,8 @@ public sealed partial class LogAnalyzer {
         logFiles = logFiles.Distinct().Where(File.Exists)
             .ToList();
 
-        foreach (var logFile in logFiles) {
+        foreach (var logFile in logFiles)
+        {
             var log = File.ReadAllText(logFile);
             if (string.IsNullOrWhiteSpace(log))
                 continue;
@@ -170,15 +182,17 @@ public sealed partial class LogAnalyzer {
         }
     }
 
-    private IEnumerable<string> FindSuspiciousModId(string log, string fullLog) {
-        if(string.IsNullOrWhiteSpace(log))
+    private IEnumerable<string> FindSuspiciousModId(string log, string fullLog)
+    {
+        if (string.IsNullOrWhiteSpace(log))
             yield break;
 
-        foreach(var modId in TryFindSuspiciousModId([log], fullLog))
+        foreach (var modId in TryFindSuspiciousModId([log], fullLog))
             yield return modId;
     }
 
-    private IEnumerable<string> TryFindSuspiciousModId(IEnumerable<string> logs, string fullLog) {
+    private IEnumerable<string> TryFindSuspiciousModId(IEnumerable<string> logs, string fullLog)
+    {
         var realLogs = logs.SelectMany(x => x.Split('('))
             .Select(x => x.Trim(' ', ')'));
 
@@ -202,7 +216,8 @@ public sealed partial class LogAnalyzer {
 
         var hintLines = new List<string>();
         foreach (var log in realLogs)
-            foreach (var modLine in modLines) {
+            foreach (var modLine in modLines)
+            {
                 var realMod = modLine.ToLower().Replace("_", "");
                 if (!realMod.Contains(modLine.ToLower().Replace("_", "")))
                     continue;
@@ -217,15 +232,16 @@ public sealed partial class LogAnalyzer {
         hintLines = hintLines.Distinct().ToList();
 
         //cnm regex
-        foreach (var line in hintLines) {
-           var modId = isFabricMod
-                ? ExtractFabricModIdentifier().Match(line).Value
-                : ExtractOtherModIdentifier().Match(line).Value;
+        foreach (var line in hintLines)
+        {
+            var modId = isFabricMod
+                 ? ExtractFabricModIdentifier().Match(line).Value
+                 : ExtractOtherModIdentifier().Match(line).Value;
 
-            if(!string.IsNullOrWhiteSpace(modId))
+            if (!string.IsNullOrWhiteSpace(modId))
                 yield return modId;
         }
     }
 
-    #endregion
+    #endregion Privates
 }

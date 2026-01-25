@@ -2,7 +2,9 @@
 
 namespace MinecraftLaunch.Base.Interfaces;
 
-public interface IDownloader {
+public interface IDownloader
+{
     Task<DownloadResult> DownloadAsync(DownloadRequest request, CancellationToken cancellationToken);
+
     Task<GroupDownloadResult> DownloadManyAsync(GroupDownloadRequest requests, CancellationToken cancellationToken);
 }

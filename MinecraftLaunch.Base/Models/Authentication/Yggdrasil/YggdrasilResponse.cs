@@ -2,7 +2,8 @@
 
 namespace MinecraftLaunch.Base.Models.Authentication.Yggdrasil;
 
-public record YggdrasilResponse {
+public record YggdrasilResponse
+{
     [JsonPropertyName("user")] public User User { get; set; }
     [JsonPropertyName("clientToken")] public string ClientToken { get; set; }
     [JsonPropertyName("accessToken")] public string AccessToken { get; set; }
@@ -10,19 +11,22 @@ public record YggdrasilResponse {
     [JsonPropertyName("availableProfiles")] public IEnumerable<ProfileModel> AvailableProfiles { get; set; }
 }
 
-public record User {
+public record User
+{
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("properties")] public IEnumerable<PropertyModel> Properties { get; set; }
 }
 
-public record PropertyModel {
+public record PropertyModel
+{
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("value")] public string Value { get; set; }
     [JsonPropertyName("userId")] public string UserId { get; set; }
     [JsonPropertyName("profileId")] public string ProfileId { get; set; }
 }
 
-public record ProfileModel {
+public record ProfileModel
+{
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("name")] public string Name { get; set; }
 }

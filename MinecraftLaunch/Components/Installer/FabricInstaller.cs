@@ -10,21 +10,25 @@ using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Installer;
 
-public sealed class FabricInstaller : InstallerBase {
+public sealed class FabricInstaller : InstallerBase
+{
     public string CustomId { get; init; }
     public FabricInstallEntry Entry { get; init; }
     public override string MinecraftFolder { get; init; }
     public MinecraftEntry InheritedMinecraft { get; init; }
 
-    public static FabricInstaller Create(string mcFolder, FabricInstallEntry installEntry, string customId = default) {
-        return new FabricInstaller {
+    public static FabricInstaller Create(string mcFolder, FabricInstallEntry installEntry, string customId = default)
+    {
+        return new FabricInstaller
+        {
             CustomId = customId,
             Entry = installEntry,
             MinecraftFolder = mcFolder,
         };
     }
 
-    public static async Task<IEnumerable<FabricInstallEntry>> EnumerableFabricAsync(string mcVersion, CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<FabricInstallEntry>> EnumerableFabricAsync(string mcVersion, CancellationToken cancellationToken = default)
+    {
         string json = await HttpUtil.FlurlClient.Request($"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}")
             .GetStringAsync(cancellationToken: cancellationToken);
 
@@ -34,17 +38,21 @@ public sealed class FabricInstaller : InstallerBase {
         return entries;
     }
 
-    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
+    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default)
+    {
         ModifiedMinecraftEntry entry = default;
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
-        try {
+        try
+        {
             var inheritedEntry = ParseMinecraft(cancellationToken);
 
             var jsonFile = await DownloadVersionJsonAsync(inheritedEntry, cancellationToken);
             entry = ParseModifiedMinecraft(jsonFile, cancellationToken);
             await CompleteFabricLibrariesAsync(entry, cancellationToken);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
         }
@@ -56,11 +64,13 @@ public sealed class FabricInstaller : InstallerBase {
 
     #region Privates
 
-    private MinecraftEntry ParseMinecraft(CancellationToken cancellationToken) {
+    private MinecraftEntry ParseMinecraft(CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.ParseMinecraft, 0.10d, TaskStatus.Running, 1, 0);
 
-        if (InheritedMinecraft is not null) {
+        if (InheritedMinecraft is not null)
+        {
             return InheritedMinecraft;
         }
 
@@ -71,7 +81,8 @@ public sealed class FabricInstaller : InstallerBase {
         return inheritedMinecraft ?? throw new InvalidOperationException("The corresponding version's parent was not found."); ;
     }
 
-    private async Task<FileInfo> DownloadVersionJsonAsync(MinecraftEntry entry, CancellationToken cancellationToken) {
+    private async Task<FileInfo> DownloadVersionJsonAsync(MinecraftEntry entry, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadVersionJson, 0.20d, TaskStatus.Running, 1, 0);
 
@@ -97,7 +108,8 @@ public sealed class FabricInstaller : InstallerBase {
         return jsonFile;
     }
 
-    private async Task CompleteFabricLibrariesAsync(MinecraftEntry minecraft, CancellationToken cancellationToken) {
+    private async Task CompleteFabricLibrariesAsync(MinecraftEntry minecraft, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
 
@@ -113,12 +125,13 @@ public sealed class FabricInstaller : InstallerBase {
         //    throw new InvalidOperationException("Some dependent files encountered errors during download");
     }
 
-    private static ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
+    private static ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
 
         return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }
 
-    #endregion
+    #endregion Privates
 }

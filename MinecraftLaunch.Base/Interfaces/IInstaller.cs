@@ -2,7 +2,8 @@
 
 namespace MinecraftLaunch.Base.Interfaces;
 
-public interface IInstaller {
+public interface IInstaller
+{
     string MinecraftFolder { get; }
 
     Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default);

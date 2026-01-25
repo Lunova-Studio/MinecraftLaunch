@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace MinecraftLaunch.Base.Models.Game;
 
-namespace MinecraftLaunch.Base.Models.Game;
-
-public record SaveEntry {
+public record SaveEntry
+{
     public long Seed { get; set; }
     public int GameType { get; set; }
     public string Folder { get; set; }

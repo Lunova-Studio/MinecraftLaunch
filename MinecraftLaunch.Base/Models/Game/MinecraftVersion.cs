@@ -3,7 +3,8 @@ using System.Text.RegularExpressions;
 
 namespace MinecraftLaunch.Base.Models.Game;
 
-public partial record struct MinecraftVersion(string VersionId, MinecraftVersionType Type) {
+public partial record struct MinecraftVersion(string VersionId, MinecraftVersionType Type)
+{
     [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
     private static partial Regex ReleaseRegex();
 
@@ -13,7 +14,8 @@ public partial record struct MinecraftVersion(string VersionId, MinecraftVersion
     [GeneratedRegex(@"^\d+\.\d+(\.\d+)?-pre\d+$")]
     private static partial Regex PreReleaseRegex();
 
-    public static MinecraftVersion Parse(string id) {
+    public static MinecraftVersion Parse(string id)
+    {
         if (ReleaseRegex().IsMatch(id))
             return new MinecraftVersion(id, MinecraftVersionType.Release);
         else if (PreReleaseRegex().IsMatch(id))

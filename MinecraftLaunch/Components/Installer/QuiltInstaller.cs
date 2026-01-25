@@ -10,21 +10,25 @@ using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Installer;
 
-public sealed class QuiltInstaller : InstallerBase {
+public sealed class QuiltInstaller : InstallerBase
+{
     public string CustomId { get; init; }
     public QuiltInstallEntry Entry { get; init; }
     public override string MinecraftFolder { get; init; }
     public MinecraftEntry InheritedMinecraft { get; init; }
 
-    public static QuiltInstaller Create(string mcFolder, QuiltInstallEntry installEntry, string customId = default) {
-        return new QuiltInstaller {
+    public static QuiltInstaller Create(string mcFolder, QuiltInstallEntry installEntry, string customId = default)
+    {
+        return new QuiltInstaller
+        {
             CustomId = customId,
             Entry = installEntry,
             MinecraftFolder = mcFolder,
         };
     }
 
-    public static async Task<IEnumerable<QuiltInstallEntry>> EnumerableQuiltAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<QuiltInstallEntry>> EnumerableQuiltAsync(string mcVersion, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         string json = await $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}"
             .GetStringAsync(cancellationToken: cancellationToken);
 
@@ -32,19 +36,23 @@ public sealed class QuiltInstaller : InstallerBase {
         return entries;
     }
 
-    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
+    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default)
+    {
         ModifiedMinecraftEntry entry = default;
         MinecraftEntry inheritedEntry = default;
 
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
-        try {
+        try
+        {
             inheritedEntry = ParseMinecraft(cancellationToken);
 
             var jsonFile = await DownloadVersionJsonAsync(inheritedEntry, cancellationToken);
             entry = ParseModifiedMinecraft(jsonFile, cancellationToken);
             await CompleteQuiltLibrariesAsync(entry, cancellationToken);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
         }
@@ -56,11 +64,13 @@ public sealed class QuiltInstaller : InstallerBase {
 
     #region Privates
 
-    private MinecraftEntry ParseMinecraft(CancellationToken cancellationToken) {
+    private MinecraftEntry ParseMinecraft(CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.ParseMinecraft, 0.10d, TaskStatus.Running, 1, 0);
 
-        if (InheritedMinecraft is not null) {
+        if (InheritedMinecraft is not null)
+        {
             return InheritedMinecraft;
         }
 
@@ -71,7 +81,8 @@ public sealed class QuiltInstaller : InstallerBase {
         return inheritedMinecraft ?? throw new InvalidOperationException("The corresponding version's parent was not found."); ;
     }
 
-    private async Task<FileInfo> DownloadVersionJsonAsync(MinecraftEntry entry, CancellationToken cancellationToken) {
+    private async Task<FileInfo> DownloadVersionJsonAsync(MinecraftEntry entry, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadVersionJson, 0.20d, TaskStatus.Running, 1, 0);
 
@@ -95,14 +106,16 @@ public sealed class QuiltInstaller : InstallerBase {
         return jsonFile;
     }
 
-    private ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
+    private ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
 
         return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }
 
-    private async Task CompleteQuiltLibrariesAsync(MinecraftEntry minecraft, CancellationToken cancellationToken) {
+    private async Task CompleteQuiltLibrariesAsync(MinecraftEntry minecraft, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadLibraries, 0.5d, TaskStatus.Running, 0, 0);
 
@@ -119,5 +132,5 @@ public sealed class QuiltInstaller : InstallerBase {
         //    throw new InvalidOperationException("Some dependent files encountered errors during download");
     }
 
-    #endregion
+    #endregion Privates
 }

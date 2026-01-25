@@ -3,7 +3,8 @@ using System.Collections.Frozen;
 
 namespace MinecraftLaunch;
 
-public static class DownloadManager {
+public static class DownloadManager
+{
     public static string CurseforgeApiKey { get; set; } = string.Empty;
 
     public static int MaxThread { get; set; } = 64;
@@ -16,7 +17,8 @@ public static class DownloadManager {
     public static readonly IDownloadMirror BmclApi = new BmclApiSource();
 }
 
-public sealed class BmclApiSource : IDownloadMirror {
+public sealed class BmclApiSource : IDownloadMirror
+{
     private static readonly FrozenDictionary<string, string> _replacementMap = new Dictionary<string, string> {
         { "https://resources.download.minecraft.net", "https://bmclapi2.bangbang93.com/assets" },
         { "https://piston-meta.mojang.com", "https://bmclapi2.bangbang93.com" },
@@ -30,7 +32,8 @@ public sealed class BmclApiSource : IDownloadMirror {
         { "https://maven.neoforged.net/releases/net/neoforged/forge", "https://bmclapi2.bangbang93.com/maven/net/neoforged/forge" }
     }.ToFrozenDictionary();
 
-    public string TryFindUrl(string sourceUrl) {
+    public string TryFindUrl(string sourceUrl)
+    {
         if (!DownloadManager.IsEnableMirror)
             return sourceUrl;
 

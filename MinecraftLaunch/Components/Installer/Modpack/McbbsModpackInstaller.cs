@@ -8,14 +8,17 @@ using System.Runtime.CompilerServices;
 
 namespace MinecraftLaunch.Components.Installer.Modpack;
 
-public sealed class McbbsModpackInstaller : InstallerBase {
+public sealed class McbbsModpackInstaller : InstallerBase
+{
     public string ModpackPath { get; init; }
     public MinecraftEntry Minecraft { get; init; }
     public McbbsModpackInstallEntry Entry { get; init; }
     public override string MinecraftFolder { get; init; }
 
-    public static McbbsModpackInstaller Create(string mcFolder, string modpackPath, McbbsModpackInstallEntry installEntry, MinecraftEntry entry) {
-        return new McbbsModpackInstaller {
+    public static McbbsModpackInstaller Create(string mcFolder, string modpackPath, McbbsModpackInstallEntry installEntry, MinecraftEntry entry)
+    {
+        return new McbbsModpackInstaller
+        {
             MinecraftFolder = mcFolder,
             ModpackPath = modpackPath,
             Entry = installEntry,
@@ -23,11 +26,14 @@ public sealed class McbbsModpackInstaller : InstallerBase {
         };
     }
 
-    public static async IAsyncEnumerable<IInstallEntry> ParseModLoaderEntryAsync(McbbsModpackInstallEntry modpack, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
-        foreach (var addon in modpack.Addons) {
+    public static async IAsyncEnumerable<IInstallEntry> ParseModLoaderEntryAsync(McbbsModpackInstallEntry modpack, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        foreach (var addon in modpack.Addons)
+        {
             cancellationToken.ThrowIfCancellationRequested();
 
-            IInstallEntry entry = addon.Id switch {
+            IInstallEntry entry = addon.Id switch
+            {
                 "fabric" => (await FabricInstaller.EnumerableFabricAsync(modpack.McVersion, cancellationToken))
                     .First(x => x.BuildVersion.Equals(addon.Version)),
                 "quilt" => (await QuiltInstaller.EnumerableQuiltAsync(modpack.McVersion, cancellationToken))
@@ -46,7 +52,8 @@ public sealed class McbbsModpackInstaller : InstallerBase {
         }
     }
 
-    public static McbbsModpackInstallEntry ParseModpackInstallEntry(string modpackPath) {
+    public static McbbsModpackInstallEntry ParseModpackInstallEntry(string modpackPath)
+    {
         using var zipArchive = ZipFile.OpenRead(modpackPath);
         var json = zipArchive?.GetEntry("mcbbs.packmeta")?.ReadAsString()
             ?? throw new ArgumentException("Not found mcbbs.packmeta");
@@ -55,15 +62,19 @@ public sealed class McbbsModpackInstaller : InstallerBase {
             ?? throw new InvalidOperationException("Failed to parsemcbbs.packmeta");
     }
 
-    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
+    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default)
+    {
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
-        try {
+        try
+        {
             await ExtractModpackAsync(cancellationToken);
 
             ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);
             ReportCompleted(true);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
         }
@@ -73,7 +84,8 @@ public sealed class McbbsModpackInstaller : InstallerBase {
 
     #region Privates
 
-    private async Task ExtractModpackAsync(CancellationToken cancellationToken) {
+    private async Task ExtractModpackAsync(CancellationToken cancellationToken)
+    {
         var zipArchive = ZipFile.OpenRead(ModpackPath);
         var entries = zipArchive?.Entries;
         ReportProgress(InstallStep.ExtractModpack, 0.10d, TaskStatus.Running, entries.Count, 0);
@@ -82,8 +94,10 @@ public sealed class McbbsModpackInstaller : InstallerBase {
         string woringPath = Minecraft.ToWorkingPath(true);
 
         int count = 0;
-        var tasks = entries.Select(x => Task.Run(() => {
-            lock (zipArchive) {
+        var tasks = entries.Select(x => Task.Run(() =>
+        {
+            lock (zipArchive)
+            {
                 ReportProgress(InstallStep.ExtractModpack,
                     ((double)Interlocked.Increment(ref count) / (double)entries.Count).ToPercentage(0.1d, 1.0d),
                     TaskStatus.Running, entries.Count, count);
@@ -96,7 +110,8 @@ public sealed class McbbsModpackInstaller : InstallerBase {
                     return;
 
                 var filePath = new FileInfo(Path.Combine(woringPath, subPath));
-                if (x.FullName.EndsWith('/')) {
+                if (x.FullName.EndsWith('/'))
+                {
                     filePath.Directory.Create();
                     return;
                 }
@@ -109,5 +124,5 @@ public sealed class McbbsModpackInstaller : InstallerBase {
         zipArchive.Dispose();
     }
 
-    #endregion
+    #endregion Privates
 }

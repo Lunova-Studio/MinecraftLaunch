@@ -6,14 +6,17 @@ using System.Text.Json.Nodes;
 
 namespace MinecraftLaunch.Extensions;
 
-public static class MinecraftEntryExtension {
-    public static JavaEntry GetAppropriateJava(this MinecraftEntry minecraft, IEnumerable<JavaEntry> javas) {
+public static class MinecraftEntryExtension
+{
+    public static JavaEntry GetAppropriateJava(this MinecraftEntry minecraft, IEnumerable<JavaEntry> javas)
+    {
         var targetJavaVersion = minecraft.GetAppropriateJavaVersion();
 
         bool isForgeOrNeoForge = false;
         List<JavaEntry> possiblyAvailableJavas = [];
 
-        if (minecraft is ModifiedMinecraftEntry modifiedMinecraft) {
+        if (minecraft is ModifiedMinecraftEntry modifiedMinecraft)
+        {
             var loaders = modifiedMinecraft.ModLoaders.Select(x => x.Type);
             isForgeOrNeoForge = loaders.Contains(ModLoaderType.Forge) || loaders.Contains(ModLoaderType.NeoForge);
         }
@@ -31,7 +34,8 @@ public static class MinecraftEntryExtension {
         return possiblyAvailableJavas.First();
     }
 
-    public static int GetAppropriateJavaVersion(this MinecraftEntry minecraft) {
+    public static int GetAppropriateJavaVersion(this MinecraftEntry minecraft)
+    {
         if (minecraft is ModifiedMinecraftEntry { HasInheritance: true } mc)
             return mc.InheritedMinecraft.GetAppropriateJavaVersion();
 
@@ -44,7 +48,8 @@ public static class MinecraftEntryExtension {
             : majorJavaVersionNode.GetInt32();
     }
 
-    public static MinecraftClient GetJarElement(this MinecraftEntry entry) {
+    public static MinecraftClient GetJarElement(this MinecraftEntry entry)
+    {
         string clientJsonPath = entry.ClientJsonPath;
         if (entry is ModifiedMinecraftEntry { HasInheritance: true } inst)
             clientJsonPath = inst.InheritedMinecraft.ClientJsonPath;
@@ -68,7 +73,8 @@ public static class MinecraftEntryExtension {
         if (sha1 is null || url is null || size is null)
             throw new InvalidDataException("Invalid client info");
 
-        return new MinecraftClient {
+        return new MinecraftClient
+        {
             MinecraftFolderPath = entry.MinecraftFolderPath,
             ClientId = Path.GetFileNameWithoutExtension(clientJarPath),
             Url = url,
@@ -77,7 +83,8 @@ public static class MinecraftEntryExtension {
         };
     }
 
-    public static AssstIndex GetAssetIndex(this MinecraftEntry minecraftEntry) {
+    public static AssstIndex GetAssetIndex(this MinecraftEntry minecraftEntry)
+    {
         // Identify file paths
         string clientJsonPath = minecraftEntry is ModifiedMinecraftEntry { HasInheritance: true } entry
             ? entry.InheritedMinecraft.ClientJsonPath
@@ -93,7 +100,8 @@ public static class MinecraftEntryExtension {
         string url = assetIndex.GetString("url") ?? throw new InvalidDataException();
         string sha1 = assetIndex.GetString("sha1") ?? throw new InvalidDataException();
 
-        return new AssstIndex {
+        return new AssstIndex
+        {
             Id = id,
             Url = url,
             Size = size,
@@ -102,24 +110,30 @@ public static class MinecraftEntryExtension {
         };
     }
 
-    public static void ExtractNatives(this MinecraftEntry minecraftEntry, IReadOnlyList<MinecraftLibrary> natives) {
+    public static void ExtractNatives(this MinecraftEntry minecraftEntry, IReadOnlyList<MinecraftLibrary> natives)
+    {
         if (!natives.Any()) return;
 
-        var extension = EnvironmentUtil.GetPlatformName() switch {
+        var extension = EnvironmentUtil.GetPlatformName() switch
+        {
             "windows" => ".dll",
             "linux" => ".so",
             "osx" => ".dylib",
             _ => "."
         };
 
-        foreach (var file in natives) {
+        foreach (var file in natives)
+        {
             using ZipArchive zip = ZipFile.OpenRead(file.FullPath);
 
-            foreach (ZipArchiveEntry entry in zip.Entries) {
-                if (Path.HasExtension(entry.FullName)) {
+            foreach (ZipArchiveEntry entry in zip.Entries)
+            {
+                if (Path.HasExtension(entry.FullName))
+                {
                     var toExtract = new FileInfo(Path.Combine(minecraftEntry.MinecraftFolderPath, "versions", minecraftEntry.Id, "natives", entry.Name));
                     toExtract.Directory?.Create();
-                    if (!toExtract.Exists) {
+                    if (!toExtract.Exists)
+                    {
                         entry.ExtractToFile(toExtract.FullName, true);
                     }
                 }
@@ -127,24 +141,30 @@ public static class MinecraftEntryExtension {
         }
     }
 
-    public static Task ExtractNativesAsync(this MinecraftEntry minecraftEntry, IReadOnlyList<MinecraftLibrary> natives, CancellationToken cancellationToken = default) => Task.Run(() => {
+    public static Task ExtractNativesAsync(this MinecraftEntry minecraftEntry, IReadOnlyList<MinecraftLibrary> natives, CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
         if (!natives.Any()) return;
 
-        var extension = EnvironmentUtil.GetPlatformName() switch {
+        var extension = EnvironmentUtil.GetPlatformName() switch
+        {
             "windows" => ".dll",
             "linux" => ".so",
             "osx" => ".dylib",
             _ => "."
         };
 
-        foreach (var file in natives) {
+        foreach (var file in natives)
+        {
             using ZipArchive zip = ZipFile.OpenRead(file.FullPath);
 
-            foreach (ZipArchiveEntry entry in zip.Entries) {
-                if (Path.HasExtension(entry.FullName)) {
+            foreach (ZipArchiveEntry entry in zip.Entries)
+            {
+                if (Path.HasExtension(entry.FullName))
+                {
                     var toExtract = new FileInfo(Path.Combine(minecraftEntry.MinecraftFolderPath, "versions", minecraftEntry.Id, "natives", entry.Name));
                     toExtract.Directory?.Create();
-                    if (!toExtract.Exists) {
+                    if (!toExtract.Exists)
+                    {
                         entry.ExtractToFile(toExtract.FullName, true);
                     }
                 }

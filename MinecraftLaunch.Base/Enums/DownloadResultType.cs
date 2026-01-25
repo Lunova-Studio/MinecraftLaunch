@@ -1,6 +1,7 @@
 ﻿namespace MinecraftLaunch.Base.Enums;
 
-public enum DownloadResultType {
+public enum DownloadResultType
+{
     Successful,
     Cancelled,
     Failed

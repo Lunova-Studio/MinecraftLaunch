@@ -7,11 +7,11 @@ using MinecraftLaunch.Components.Parser;
 using MinecraftLaunch.Extensions;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Runtime.CompilerServices;
 
 namespace MinecraftLaunch.Components.Installer;
 
-public sealed class OptifineInstaller : InstallerBase {
+public sealed class OptifineInstaller : InstallerBase
+{
     public string CustomId { get; init; }
     public string JavaPath { get; init; }
     public OptifineInstallEntry Entry { get; init; }
@@ -19,8 +19,10 @@ public sealed class OptifineInstaller : InstallerBase {
     public MinecraftEntry InheritedMinecraft { get; init; }
     public MinecraftEntry Minecraft { get; set; }
 
-    public static OptifineInstaller Create(string mcFolder, string javaPath, OptifineInstallEntry optifineInstallEntry, string customId = default) {
-        return new OptifineInstaller {
+    public static OptifineInstaller Create(string mcFolder, string javaPath, OptifineInstallEntry optifineInstallEntry, string customId = default)
+    {
+        return new OptifineInstaller
+        {
             MinecraftFolder = mcFolder,
             Entry = optifineInstallEntry,
             CustomId = customId,
@@ -28,15 +30,18 @@ public sealed class OptifineInstaller : InstallerBase {
         };
     }
 
-    public static OptifineInstaller Create(string mcFolder, OptifineInstallEntry optifineInstallEntry, MinecraftEntry minecraft) {
-        return new OptifineInstaller {
+    public static OptifineInstaller Create(string mcFolder, OptifineInstallEntry optifineInstallEntry, MinecraftEntry minecraft)
+    {
+        return new OptifineInstaller
+        {
             MinecraftFolder = mcFolder,
             Entry = optifineInstallEntry,
             Minecraft = minecraft,
         };
     }
 
-    public static async Task<IEnumerable<OptifineInstallEntry>> EnumerableOptifineAsync(string mcVersion, CancellationToken cancellationToken = default) {
+    public static async Task<IEnumerable<OptifineInstallEntry>> EnumerableOptifineAsync(string mcVersion, CancellationToken cancellationToken = default)
+    {
         string url = $"https://bmclapi2.bangbang93.com/optifine/{mcVersion}";
 
         string json = await url.GetStringAsync(cancellationToken: cancellationToken);
@@ -46,17 +51,20 @@ public sealed class OptifineInstaller : InstallerBase {
         return entries;
     }
 
-    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default) {
+    public override async Task<MinecraftEntry> InstallAsync(CancellationToken cancellationToken = default)
+    {
         FileInfo optifinePackageFile = default;
         ModifiedMinecraftEntry entry = default;
         MinecraftEntry inheritedEntry = default;
 
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
-        try {
+        try
+        {
             inheritedEntry = ParseMinecraft(cancellationToken);
             optifinePackageFile = await DownloadOptifinePackageAsync(cancellationToken);
-            if (Minecraft is ModifiedMinecraftEntry modifiedMinecraft) {
+            if (Minecraft is ModifiedMinecraftEntry modifiedMinecraft)
+            {
                 CopyToMods(optifinePackageFile);
 
                 ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);
@@ -73,7 +81,9 @@ public sealed class OptifineInstaller : InstallerBase {
 
             ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);
             ReportCompleted(true);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
         }
@@ -83,11 +93,13 @@ public sealed class OptifineInstaller : InstallerBase {
 
     #region Privates
 
-    private MinecraftEntry ParseMinecraft(CancellationToken cancellationToken) {
+    private MinecraftEntry ParseMinecraft(CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.ParseMinecraft, 0.10d, TaskStatus.Running, 1, 0);
 
-        if (InheritedMinecraft is not null) {
+        if (InheritedMinecraft is not null)
+        {
             return InheritedMinecraft;
         }
 
@@ -98,7 +110,8 @@ public sealed class OptifineInstaller : InstallerBase {
         return inheritedMinecraft ?? throw new InvalidOperationException("The corresponding version's parent was not found."); ;
     }
 
-    private async Task<FileInfo> DownloadOptifinePackageAsync(CancellationToken cancellationToken) {
+    private async Task<FileInfo> DownloadOptifinePackageAsync(CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadPackage, 0.2d, TaskStatus.Running, 1, 0);
 
@@ -115,7 +128,8 @@ public sealed class OptifineInstaller : InstallerBase {
         return packageFile;
     }
 
-    private void CopyToMods(FileInfo packageInfo) {
+    private void CopyToMods(FileInfo packageInfo)
+    {
         var fileInfo = new FileInfo(Path.Combine(Minecraft.ToWorkingPath(true), "mods", packageInfo.Name));
 
         if (!fileInfo.Directory.Exists)
@@ -124,7 +138,8 @@ public sealed class OptifineInstaller : InstallerBase {
         packageInfo.MoveTo(fileInfo.FullName, true);
     }
 
-    private (ZipArchive package, string launchwrapperVersion, string launchwrapperName) ParseOptifinePackage(string packageFilePath, CancellationToken cancellationToken) {
+    private (ZipArchive package, string launchwrapperVersion, string launchwrapperName) ParseOptifinePackage(string packageFilePath, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.ParsePackage, 0.3d, TaskStatus.Running, 1, 0);
 
@@ -143,11 +158,13 @@ public sealed class OptifineInstaller : InstallerBase {
         string launchwrapperVersion,
         string launchwrapperName,
         ZipArchive packageArchive,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.WriteVersionJsonAndSomeDependencies, 0.45d, TaskStatus.Running, 1, 0);
 
-        if (launchwrapperVersion is not "1.12") {
+        if (launchwrapperVersion is not "1.12")
+        {
             var launchwrapperJar = packageArchive.GetEntry($"launchwrapper-of-{launchwrapperVersion}.jar")
                 ?? throw new FileNotFoundException("Invalid OptiFine package");
 
@@ -161,7 +178,8 @@ public sealed class OptifineInstaller : InstallerBase {
             jsonFile.Directory.Create();
 
         var time = Minecraft.ReleaseTime.ToString("s");
-        var jsonEntry = new OptifineMinecraftEntry {
+        var jsonEntry = new OptifineMinecraftEntry
+        {
             Id = entryId,
             InheritsFrom = minecraft.Id,
             Time = time,
@@ -187,14 +205,16 @@ public sealed class OptifineInstaller : InstallerBase {
         return jsonFile;
     }
 
-    private ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
+    private ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
 
         return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }
 
-    private async Task RunInstallProcessorAsync(string packageFilePath, MinecraftEntry entry, CancellationToken cancellationToken) {
+    private async Task RunInstallProcessorAsync(string packageFilePath, MinecraftEntry entry, CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.RunInstallProcessor, 0.65d, TaskStatus.Running, 1, 0);
 
@@ -206,7 +226,8 @@ public sealed class OptifineInstaller : InstallerBase {
             optifineLibraryFile.Directory.Create();
 
         using var process = Process.Start(
-            new ProcessStartInfo(JavaPath) {
+            new ProcessStartInfo(JavaPath)
+            {
                 UseShellExecute = false,
                 WorkingDirectory = MinecraftFolder,
                 RedirectStandardError = true,
@@ -230,5 +251,5 @@ public sealed class OptifineInstaller : InstallerBase {
         ReportProgress(InstallStep.RunInstallProcessor, 1.0d, TaskStatus.Running, 1, 1);
     }
 
-    #endregion
+    #endregion Privates
 }

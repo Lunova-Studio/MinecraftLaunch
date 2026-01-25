@@ -8,7 +8,8 @@ using System.Net.Http.Json;
 
 namespace MinecraftLaunch.Components.Authenticator;
 
-public sealed class YggdrasilAuthenticator {
+public sealed class YggdrasilAuthenticator
+{
     private readonly string _url;
     private readonly string _email;
     private readonly string _password;
@@ -19,19 +20,23 @@ public sealed class YggdrasilAuthenticator {
     /// <param name="url">The URL for authentication.</param>
     /// <param name="email">The email of the account.</param>
     /// <param name="password">The password of the account.</param>
-    public YggdrasilAuthenticator(string url, string email, string password) {
+    public YggdrasilAuthenticator(string url, string email, string password)
+    {
         _url = url;
         _email = email;
         _password = password;
     }
 
-    public async Task<YggdrasilAccount> RefreshAsync(YggdrasilAccount account, CancellationToken cancellationToken = default) {
+    public async Task<YggdrasilAccount> RefreshAsync(YggdrasilAccount account, CancellationToken cancellationToken = default)
+    {
         var request = HttpUtil.Request(new Url(_url), "authserver", "refresh");
-        var payload = new YggdrasilRefreshPayload {
+        var payload = new YggdrasilRefreshPayload
+        {
             RequestUser = true,
             AccessToken = account.AccessToken,
             ClientToken = account.ClientToken,
-            SelectedProfile = new SelectedProfile {
+            SelectedProfile = new SelectedProfile
+            {
                 Name = account.Name,
                 Id = account.Uuid.ToString("N"),
             }
@@ -52,9 +57,11 @@ public sealed class YggdrasilAuthenticator {
     /// Asynchronously authenticates the Yggdrasil account.
     /// </summary>
     /// <returns>A ValueTask that represents the asynchronous operation. The task result contains the authenticated Yggdrasil account.</returns>
-    public async Task<IEnumerable<YggdrasilAccount>> AuthenticateAsync(CancellationToken cancellationToken = default) {
+    public async Task<IEnumerable<YggdrasilAccount>> AuthenticateAsync(CancellationToken cancellationToken = default)
+    {
         var request = HttpUtil.Request(new Url(_url), "authserver", "authenticate");
-        var payload = new YggdrasilAuthenticatePayload {
+        var payload = new YggdrasilAuthenticatePayload
+        {
             ClientToken = Guid.NewGuid().ToString("N"),
             Username = _email,
             Password = _password,

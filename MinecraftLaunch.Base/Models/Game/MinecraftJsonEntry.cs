@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.Game;
 
-public class AssstIndex : MinecraftDependency, IDownloadDependency, IVerifiableDependency {
+public class AssstIndex : MinecraftDependency, IDownloadDependency, IVerifiableDependency
+{
     long? IVerifiableDependency.Size => Size;
 
     [JsonPropertyName("id")] public string Id { get; set; }
@@ -15,7 +16,8 @@ public class AssstIndex : MinecraftDependency, IDownloadDependency, IVerifiableD
     [JsonIgnore] public override string FilePath => Path.Combine("assets", "indexes", $"{Id}.json");
 }
 
-public record MinecraftJsonEntry {
+public record MinecraftJsonEntry
+{
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("type")] public string Type { get; set; }
     [JsonPropertyName("assets")] public string Assets { get; set; }
@@ -29,7 +31,8 @@ public record MinecraftJsonEntry {
     [JsonPropertyName("minecraftArguments")] public string MinecraftArguments { get; set; }
 }
 
-public record AssstIndexJsonEntry {
+public record AssstIndexJsonEntry
+{
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("size")] public int Size { get; set; }
     [JsonPropertyName("url")] public string Url { get; set; }
@@ -37,7 +40,8 @@ public record AssstIndexJsonEntry {
     [JsonPropertyName("totalSize")] public int TotalSize { get; set; }
 }
 
-public record OptifineMinecraftEntry {
+public record OptifineMinecraftEntry
+{
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("time")] public string Time { get; set; }
     [JsonPropertyName("type")] public string Type { get; set; }
@@ -48,7 +52,8 @@ public record OptifineMinecraftEntry {
     [JsonPropertyName("minecraftArguments")] public string MinecraftArguments { get; set; }
 }
 
-public record struct OptifineMinecraftLibrary {
+public record struct OptifineMinecraftLibrary
+{
     [JsonPropertyName("name")] public string Name { get; set; }
 }
 

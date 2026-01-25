@@ -11,14 +11,16 @@ using System.Text.Json.Nodes;
 
 namespace MinecraftLaunch.Components.Parser;
 
-public sealed class ArgumentsParser {
+public sealed class ArgumentsParser
+{
     private IReadOnlyList<MinecraftLibrary> _natives;
     private IReadOnlyList<MinecraftLibrary> _libraries;
 
     public LaunchConfig LaunchConfig { get; init; }
     public MinecraftEntry MinecraftEntry { get; init; }
 
-    public ArgumentsParser(MinecraftEntry minecraftEntry, LaunchConfig launchConfig) {
+    public ArgumentsParser(MinecraftEntry minecraftEntry, LaunchConfig launchConfig)
+    {
         LaunchConfig = launchConfig;
         MinecraftEntry = minecraftEntry;
 
@@ -31,11 +33,13 @@ public sealed class ArgumentsParser {
 
     internal IReadOnlyList<MinecraftLibrary> GetNatives() => _natives;
 
-    private void LoadLibraries() {
+    private void LoadLibraries()
+    {
         var natives = new List<MinecraftLibrary>();
         var libraries = new List<MinecraftLibrary>();
 
-        if (MinecraftEntry is ModifiedMinecraftEntry { HasInheritance: true } modifiedMinecraftInstance) {
+        if (MinecraftEntry is ModifiedMinecraftEntry { HasInheritance: true } modifiedMinecraftInstance)
+        {
             (var inheritedLibs, var inheritedNatives) = modifiedMinecraftInstance.InheritedMinecraft.GetRequiredLibraries();
 
             libraries.AddRange(inheritedLibs);
@@ -45,23 +49,29 @@ public sealed class ArgumentsParser {
         (var libs, var nats) = MinecraftEntry.GetRequiredLibraries();
         natives.AddRange(nats);
 
-        foreach (var lib in libs) {
+        foreach (var lib in libs)
+        {
             MinecraftLibrary existsEqualLib = null;
             MinecraftLibrary sameNameLib = null;
 
-            foreach (var containedLib in libraries) {
-                if (lib.Equals(containedLib)) {
+            foreach (var containedLib in libraries)
+            {
+                if (lib.Equals(containedLib))
+                {
                     existsEqualLib = containedLib;
                     break;
-                } else if (lib.Name == containedLib.Name
+                }
+                else if (lib.Name == containedLib.Name
                       && lib.Classifier == containedLib.Classifier
-                      && lib.Domain == lib.Domain) {
+                      && lib.Domain == lib.Domain)
+                {
                     sameNameLib = containedLib;
                     break;
                 }
             }
 
-            if (existsEqualLib == null) {
+            if (existsEqualLib == null)
+            {
                 libraries.Add(lib);
 
                 if (sameNameLib != null)
@@ -73,7 +83,8 @@ public sealed class ArgumentsParser {
         _natives = natives;
     }
 
-    public IEnumerable<string> Parse() {
+    public IEnumerable<string> Parse()
+    {
         if (!CanParse())
             throw new InvalidOperationException("Missing required parameters");
 
@@ -90,7 +101,8 @@ public sealed class ArgumentsParser {
         var vmParameters = JvmArgumentParser.Parse(entity);
         var gameParameters = GameArgumentParser.Parse(entity);
 
-        if (MinecraftEntry is ModifiedMinecraftEntry { HasInheritance: true } inst) {
+        if (MinecraftEntry is ModifiedMinecraftEntry { HasInheritance: true } inst)
+        {
             var inheritedVersionEntry = JsonNode.Parse(File.ReadAllText(inst.InheritedMinecraft.ClientJsonPath))
                 .Deserialize(MinecraftJsonEntryContext.Default.MinecraftJsonEntry)
                 ?? throw new JsonException("Failed to parse version.json");
@@ -135,7 +147,8 @@ public sealed class ArgumentsParser {
             ?? throw new InvalidOperationException("Invalid asset index path");
 
         string versionType = string.IsNullOrEmpty(LaunchConfig.LauncherName)
-            ? MinecraftEntry.Version.Type switch {
+            ? MinecraftEntry.Version.Type switch
+            {
                 MinecraftVersionType.Release => "release",
                 MinecraftVersionType.Snapshot => "snapshot",
                 MinecraftVersionType.OldBeta => "old_beta",
@@ -175,7 +188,8 @@ public sealed class ArgumentsParser {
 
         foreach (var arg in gameParameters) yield return arg.ReplaceFromDictionary(gameParametersReplace);
 
-        if (LaunchConfig.Width != 0 && LaunchConfig.Height != 0) {
+        if (LaunchConfig.Width != 0 && LaunchConfig.Height != 0)
+        {
             yield return $"--width {LaunchConfig.Width}";
             yield return $"--height {LaunchConfig.Height}";
         }
@@ -184,8 +198,10 @@ public sealed class ArgumentsParser {
         if (!string.IsNullOrWhiteSpace(LaunchConfig.SaveName) && isHighVersion)
             yield return $"--quickPlaySingleplayer {LaunchConfig.SaveName.ToPath()}";
 
-        if (LaunchConfig.ServerInfo is not null) {
-            if (isHighVersion) {
+        if (LaunchConfig.ServerInfo is not null)
+        {
+            if (isHighVersion)
+            {
                 yield return $"--quickPlayMultiplayer {LaunchConfig.ServerInfo.Address.ToPath()}";
                 yield break;
             }
@@ -199,19 +215,24 @@ public sealed class ArgumentsParser {
 /// <summary>
 /// 游戏参数解析器
 /// </summary>
-internal sealed class GameArgumentParser {
+internal sealed class GameArgumentParser
+{
     /// <summary>
     /// 解析参数
     /// </summary>
     /// <returns></returns>
-    public static IEnumerable<string> Parse(MinecraftJsonEntry gameJsonEntry) {
-        if (!string.IsNullOrEmpty(gameJsonEntry.MinecraftArguments)) {
-            foreach (var arg in gameJsonEntry.MinecraftArguments.Split(' ').GroupArguments()) {
+    public static IEnumerable<string> Parse(MinecraftJsonEntry gameJsonEntry)
+    {
+        if (!string.IsNullOrEmpty(gameJsonEntry.MinecraftArguments))
+        {
+            foreach (var arg in gameJsonEntry.MinecraftArguments.Split(' ').GroupArguments())
+            {
                 yield return arg;
             }
         }
 
-        if (gameJsonEntry.Arguments?.GetEnumerable("game") is null) {
+        if (gameJsonEntry.Arguments?.GetEnumerable("game") is null)
+        {
             yield break;
         }
 
@@ -228,11 +249,14 @@ internal sealed class GameArgumentParser {
 /// <summary>
 /// Jvm 虚拟机参数解析器
 /// </summary>
-internal sealed class JvmArgumentParser {
-    public static IEnumerable<string> Parse(MinecraftJsonEntry gameJsonEntry) {
+internal sealed class JvmArgumentParser
+{
+    public static IEnumerable<string> Parse(MinecraftJsonEntry gameJsonEntry)
+    {
         var jvm = new List<string>();
 
-        if (gameJsonEntry.Arguments.GetEnumerable("jvm") is null) {
+        if (gameJsonEntry.Arguments.GetEnumerable("jvm") is null)
+        {
             yield return "-Djava.library.path=${natives_directory}";
             yield return "-Dminecraft.launcher.brand=${launcher_name}";
             yield return "-Dminecraft.launcher.version=${launcher_version}";
@@ -240,8 +264,10 @@ internal sealed class JvmArgumentParser {
             yield break;
         }
 
-        foreach (var arg in gameJsonEntry.Arguments.GetEnumerable("jvm")) {
-            if (arg.GetValueKind() is JsonValueKind.String) {
+        foreach (var arg in gameJsonEntry.Arguments.GetEnumerable("jvm"))
+        {
+            if (arg.GetValueKind() is JsonValueKind.String)
+            {
                 var argValue = arg.GetString().Trim();
 
                 if (argValue.Contains(' '))
@@ -263,15 +289,19 @@ internal sealed class JvmArgumentParser {
     /// 获取虚拟机环境参数
     /// </summary>
     /// <returns></returns>
-    public static IEnumerable<string> GetEnvironmentJvmArguments() {
-        switch (EnvironmentUtil.GetPlatformName()) {
+    public static IEnumerable<string> GetEnvironmentJvmArguments()
+    {
+        switch (EnvironmentUtil.GetPlatformName())
+        {
             case "windows":
                 yield return "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump";
-                if (Environment.OSVersion.Version.Major == 10) {
+                if (Environment.OSVersion.Version.Major == 10)
+                {
                     yield return "-Dos.name=\"Windows 10\"";
                     yield return "-Dos.version=10.0";
                 }
                 break;
+
             case "osx":
                 yield return "-XstartOnFirstThread";
                 break;

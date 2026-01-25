@@ -10,7 +10,8 @@ using System.Security.Cryptography;
 
 namespace MinecraftLaunch.Components.Downloader;
 
-public sealed class MinecraftResourceDownloader {
+public sealed class MinecraftResourceDownloader
+{
     private readonly MinecraftEntry _entry;
     private readonly DefaultDownloader _downloader;
     private readonly List<MinecraftDependency> _dependencies = [];
@@ -21,7 +22,8 @@ public sealed class MinecraftResourceDownloader {
     public bool AllowVerifyAssets { get; init; } = true;
     public bool AllowInheritedDependencies { get; init; } = true;
 
-    public MinecraftResourceDownloader(MinecraftEntry entry, IEnumerable<MinecraftDependency> extraDependencies = null) {
+    public MinecraftResourceDownloader(MinecraftEntry entry, IEnumerable<MinecraftDependency> extraDependencies = null)
+    {
         if (extraDependencies is not null)
             _dependencies.AddRange(extraDependencies);
 
@@ -29,7 +31,8 @@ public sealed class MinecraftResourceDownloader {
         _downloader = new();
     }
 
-    public async Task<GroupDownloadResult> VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default) {
+    public async Task<GroupDownloadResult> VerifyAndDownloadDependenciesAsync(int fileVerificationParallelism = 10, CancellationToken cancellationToken = default)
+    {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileVerificationParallelism);
 
         #region 1.1 Libraries & Inherited Libraries
@@ -40,30 +43,34 @@ public sealed class MinecraftResourceDownloader {
 
         if (AllowInheritedDependencies
             && _entry is ModifiedMinecraftEntry modInstance
-            && modInstance.HasInheritance) {
+            && modInstance.HasInheritance)
+        {
             (libs, nativeLibs) = modInstance.InheritedMinecraft.GetRequiredLibraries();
             _dependencies.AddRange(libs);
             _dependencies.AddRange(nativeLibs);
         }
 
-        #endregion
+        #endregion 1.1 Libraries & Inherited Libraries
 
         #region 1.2 Client.jar
 
         var jar = _entry.GetJarElement();
-        if (jar != null) {
+        if (jar != null)
+        {
             _dependencies.Add(jar);
         }
 
-        #endregion
+        #endregion 1.2 Client.jar
 
         #region 1.3 AssetIndex & Assets
 
-        if (AllowVerifyAssets) {
+        if (AllowVerifyAssets)
+        {
             var assetIndex = _entry.GetAssetIndex();
 
             // 验证 AssetIndex 文件
-            if (!VerifyDependency(assetIndex, cancellationToken)) {
+            if (!VerifyDependency(assetIndex, cancellationToken))
+            {
                 await assetIndex.Url.DownloadFileAsync(Path.Combine(assetIndex.MinecraftFolderPath, "assets", "indexes"),
                     $"{assetIndex.Id}.json", 65536, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             }
@@ -72,12 +79,14 @@ public sealed class MinecraftResourceDownloader {
             _dependencies.AddRange(_entry.GetRequiredAssets());
         }
 
-        #endregion
+        #endregion 1.3 AssetIndex & Assets
 
         // 2. 验证依赖项
         ConcurrentBag<MinecraftDependency> invalidDeps = [];
-        Parallel.ForEach(_dependencies, new ParallelOptions { MaxDegreeOfParallelism = fileVerificationParallelism }, dep => {
-            if (!VerifyDependency(dep, cancellationToken)) {
+        Parallel.ForEach(_dependencies, new ParallelOptions { MaxDegreeOfParallelism = fileVerificationParallelism }, dep =>
+        {
+            if (!VerifyDependency(dep, cancellationToken))
+            {
                 invalidDeps.Add(dep);
             }
         });
@@ -100,7 +109,8 @@ public sealed class MinecraftResourceDownloader {
 
     #region Privates
 
-    private static bool VerifyDependency(MinecraftDependency dep, CancellationToken cancellationToken = default) {
+    private static bool VerifyDependency(MinecraftDependency dep, CancellationToken cancellationToken = default)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         Debug.WriteLineIf(dep is FabricLibrary, dep.FullPath);
         if (!File.Exists(dep.FullPath))
@@ -109,7 +119,8 @@ public sealed class MinecraftResourceDownloader {
         if (dep is not IVerifiableDependency verifiableDependency)
             return true;
 
-        bool VerifySha1() {
+        bool VerifySha1()
+        {
             using var fileStream = File.OpenRead(dep.FullPath);
             byte[] sha1Bytes = SHA1.HashData(fileStream);
 
@@ -122,7 +133,8 @@ public sealed class MinecraftResourceDownloader {
             return sha1Str == verifiableDependency.Sha1;
         }
 
-        bool VerifySize() {
+        bool VerifySize()
+        {
             var file = new FileInfo(dep.FullPath);
             return verifiableDependency.Size == file.Length;
         }
@@ -135,5 +147,5 @@ public sealed class MinecraftResourceDownloader {
         return true;
     }
 
-    #endregion
+    #endregion Privates
 }

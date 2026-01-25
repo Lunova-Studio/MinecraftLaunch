@@ -12,13 +12,17 @@ using System.Text.RegularExpressions;
 
 namespace MinecraftLaunch.Utilities;
 
-public static partial class JavaUtil {
-    public static async Task<JavaEntry> GetJavaInfoAsync(string javaPath, CancellationToken cancellationToken = default) {
-        if (string.IsNullOrEmpty(javaPath) || !File.Exists(javaPath)) {
+public static partial class JavaUtil
+{
+    public static async Task<JavaEntry> GetJavaInfoAsync(string javaPath, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(javaPath) || !File.Exists(javaPath))
+        {
             return null;
         }
 
-        using var process = Process.Start(new ProcessStartInfo(javaPath) {
+        using var process = Process.Start(new ProcessStartInfo(javaPath)
+        {
             Arguments = "-version",
             CreateNoWindow = true,
             UseShellExecute = false,
@@ -42,7 +46,8 @@ public static partial class JavaUtil {
         await process.WaitForExitAsync(cancellationToken);
 
         var versionParts = javaVersion.Split(".");
-        return new JavaEntry {
+        return new JavaEntry
+        {
             Is64bit = is64bit,
             JavaPath = javaPath,
             JavaType = javaType,
@@ -51,9 +56,12 @@ public static partial class JavaUtil {
         };
     }
 
-    public static async IAsyncEnumerable<JavaEntry> EnumerableJavaAsync([EnumeratorCancellation] CancellationToken cancellationToken = default) {
-        if (EnvironmentUtil.IsWindow) {
-            foreach (var java in GetJavasForWindows()) {
+    public static async IAsyncEnumerable<JavaEntry> EnumerableJavaAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (EnvironmentUtil.IsWindow)
+        {
+            foreach (var java in GetJavasForWindows())
+            {
                 if (File.Exists(java))
                     yield return await GetJavaInfoAsync(java, cancellationToken);
             }
@@ -61,7 +69,8 @@ public static partial class JavaUtil {
             yield break;
         }
 
-        using var process = Process.Start(new ProcessStartInfo("whereis") {
+        using var process = Process.Start(new ProcessStartInfo("whereis")
+        {
             CreateNoWindow = true,
             UseShellExecute = false,
             RedirectStandardError = true,
@@ -75,7 +84,8 @@ public static partial class JavaUtil {
         if (process == null)
             yield break;
 
-        do {
+        do
+        {
             cancellationToken.ThrowIfCancellationRequested();
 
             var line = process.StandardOutput.ReadLine();
@@ -98,14 +108,17 @@ public static partial class JavaUtil {
     private static partial Regex JavaVersionRegex();
 
     [SupportedOSPlatform("Windows")]
-    private static IEnumerable<string> GetJavasForWindows() {
+    private static IEnumerable<string> GetJavasForWindows()
+    {
         //Use by:https://github.com/Xcube-Studio/Natsurainko.FluentCore/blob/main/Natsurainko.FluentCore/Environment/JavaUtils.cs
         List<string> result = [];
 
         #region Cmd: Find Java by running "where javaw" command in cmd.exe
 
-        using var process = new Process() {
-            StartInfo = new ProcessStartInfo() {
+        using var process = new Process()
+        {
+            StartInfo = new ProcessStartInfo()
+            {
                 FileName = "cmd",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -134,22 +147,25 @@ public static partial class JavaUtil {
         )!; // null checked in the where clause
         result.AddRange(javaPaths);
 
-        #endregion
+        #endregion Cmd: Find Java by running "where javaw" command in cmd.exe
 
         #region Registry: Find Java by searching the registry
 
         var javaHomePaths = new List<string>();
 
         // Local function: recursively search for the keyName in the registry
-        static List<string> ForRegistryKey(RegistryKey registryKey, string keyName) {
+        static List<string> ForRegistryKey(RegistryKey registryKey, string keyName)
+        {
             var result = new List<string>();
 
-            foreach (string valueName in registryKey.GetValueNames()) {
+            foreach (string valueName in registryKey.GetValueNames())
+            {
                 if (valueName == keyName) // Check that the valueName exists
                     result.Add((string)registryKey.GetValue(valueName)!);
             }
 
-            foreach (string registrySubKey in registryKey.GetSubKeyNames()) {
+            foreach (string registrySubKey in registryKey.GetSubKeyNames())
+            {
                 using var subKey = registryKey.OpenSubKey(registrySubKey);
                 if (subKey is not null) // Check that the registrySubKey exists
                     result.AddRange(ForRegistryKey(subKey, keyName));
@@ -161,15 +177,18 @@ public static partial class JavaUtil {
 
         using var reg = Registry.LocalMachine.OpenSubKey("SOFTWARE");
 
-        if (reg is not null && reg.GetSubKeyNames().Contains("JavaSoft")) {
+        if (reg is not null && reg.GetSubKeyNames().Contains("JavaSoft"))
+        {
             using var registryKey = reg.OpenSubKey("JavaSoft");
             if (registryKey is not null)
                 javaHomePaths.AddRange(ForRegistryKey(registryKey, "JavaHome"));
         }
 
-        if (reg is not null && reg.GetSubKeyNames().Contains("WOW6432Node")) {
+        if (reg is not null && reg.GetSubKeyNames().Contains("WOW6432Node"))
+        {
             using var registryKey = reg.OpenSubKey("WOW6432Node");
-            if (registryKey is not null && registryKey.GetSubKeyNames().Contains("JavaSoft")) {
+            if (registryKey is not null && registryKey.GetSubKeyNames().Contains("JavaSoft"))
+            {
                 using var registrySubKey = reg.OpenSubKey("JavaSoft");
                 if (registrySubKey is not null)
                     ForRegistryKey(registrySubKey, "JavaHome").ForEach(x => javaHomePaths.Add(x));
@@ -180,7 +199,7 @@ public static partial class JavaUtil {
             if (Directory.Exists(item))
                 result.AddRange(new DirectoryInfo(item).FindAll("javaw.exe").Select(x => x.FullName));
 
-        #endregion
+        #endregion Registry: Find Java by searching the registry
 
         #region Special Folders
 
@@ -214,10 +233,10 @@ public static partial class JavaUtil {
             if (Directory.Exists(folder))
                 result.AddRange(new DirectoryInfo(folder).FindAll("javaw.exe").Select(x => x.FullName));
 
-        #endregion
+        #endregion Special Folders
 
         return result.Distinct();
     }
 
-    #endregion
+    #endregion Privates
 }

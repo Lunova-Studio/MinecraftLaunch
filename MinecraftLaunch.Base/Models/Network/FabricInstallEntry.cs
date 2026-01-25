@@ -1,11 +1,11 @@
 ﻿using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Interfaces;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record FabricInstallEntry : IInstallEntry {
+public record FabricInstallEntry : IInstallEntry
+{
     [JsonPropertyName("loader")] public FabricMavenItem Loader { get; set; }
     [JsonPropertyName("intermediary")] public FabricMavenItem Intermediary { get; set; }
 
@@ -16,7 +16,8 @@ public record FabricInstallEntry : IInstallEntry {
     [JsonIgnore] public string Description => Loader.IsStable ? $"Release" : "Preview";
 }
 
-public record FabricMavenItem {
+public record FabricMavenItem
+{
     [JsonPropertyName("stable")] public bool IsStable { get; set; }
 
     [JsonPropertyName("maven")] public string Maven { get; set; }

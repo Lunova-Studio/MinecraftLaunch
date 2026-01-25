@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record QuiltInstallEntry : IInstallEntry {
+public record QuiltInstallEntry : IInstallEntry
+{
     [JsonPropertyName("loader")] public required FabricMavenItem Loader { get; set; }
     [JsonPropertyName("intermediary")] public required FabricMavenItem Intermediary { get; set; }
 

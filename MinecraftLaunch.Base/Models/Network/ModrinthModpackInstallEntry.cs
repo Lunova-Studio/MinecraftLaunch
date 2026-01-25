@@ -2,7 +2,8 @@
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record ModrinthModpackInstallEntry {
+public record ModrinthModpackInstallEntry
+{
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("summary")] public string Summary { get; set; }
     [JsonPropertyName("versionId")] public string VersionId { get; set; }
@@ -13,7 +14,8 @@ public record ModrinthModpackInstallEntry {
     [JsonIgnore] public string McVersion => Dependencies["minecraft"];
 }
 
-public record ModrinthModpackFileEntry {
+public record ModrinthModpackFileEntry
+{
     [JsonPropertyName("path")] public string Path { get; set; }
     [JsonPropertyName("fileSize")] public long Size { get; set; }
     [JsonPropertyName("downloads")] public IEnumerable<string> Downloads { get; set; }

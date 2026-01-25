@@ -1,12 +1,18 @@
-﻿namespace MinecraftLaunch.Base.Interfaces;
+﻿using MinecraftLaunch.Base.Enums;
 
-public interface IResource {
-    string Name { get; init; }
-    string Summary { get; init; }
-    string IconUrl { get; init; }
-    int DownloadCount { get; init; }
-    DateTime DateModified { get; init; }
-    IEnumerable<string> Categories { get; init; }
-    IEnumerable<string> Screenshots { get; init; }
-    IEnumerable<string> MinecraftVersions { get; init; }
+namespace MinecraftLaunch.Base.Interfaces;
+
+public interface IResource
+{
+    public string Name { get; init; }
+    public string Summary { get; init; }
+    public string IconUrl { get; init; }
+    public string WebsiteUrl { get; init; }
+    public int DownloadCount { get; init; }
+    public DateTime DateModified { get; init; }
+    public IEnumerable<string> Categories { get; init; }
+    public IEnumerable<string> Screenshots { get; init; }
+    public IEnumerable<string> MinecraftVersions { get; init; }
+    public IEnumerable<ModLoaderType> Loaders { get; init; }
+    public ResourceType ResourceType { get; }
 }

@@ -1,8 +1,10 @@
 ﻿namespace MinecraftLaunch.Base.Enums;
 
-public enum CrashReasons {
+public enum CrashReasons
+{
     // Minecraft
     FileOrContentCheckFailed,
+
     SpecificBlockCausedCrash,
     SpecificEntityCausedCrash,
     TextureTooLargeOrInsufficientGraphicsConfig,
@@ -11,6 +13,7 @@ public enum CrashReasons {
 
     // Mod
     ModConfigCausedGameCrash,
+
     ModMixinFailed,
     ModLoaderError,
     ModInitializationFailed,
@@ -21,6 +24,7 @@ public enum CrashReasons {
 
     // ModLoader
     OptiFineIncompatibleWithForge,
+
     FabricError,
     FabricErrorWithSolution,
     ForgeError,
@@ -30,11 +34,13 @@ public enum CrashReasons {
 
     // Log
     CrashLogStackAnalysisFoundKeyword,
+
     CrashLogStackAnalysisFoundModName,
     MCLogStackAnalysisFoundKeyword,
 
     // Jvm
     InsufficientMemory,
+
     UsingJDK,
     GraphicsCardDoesNotSupportOpenGL,
     UsingOpenJ9,

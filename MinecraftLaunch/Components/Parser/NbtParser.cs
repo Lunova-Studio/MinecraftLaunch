@@ -5,22 +5,27 @@ using NbtToolkit.Binary;
 
 namespace MinecraftLaunch.Components.Parser;
 
-public sealed class NbtParser : INbtParser {
+public sealed class NbtParser : INbtParser
+{
     private NbtReader _reader;
 
     private readonly string _nbtFilePath;
     private readonly MinecraftEntry _entry;
 
-    internal NbtParser(string nbtFile) {
+    internal NbtParser(string nbtFile)
+    {
         _nbtFilePath = nbtFile;
     }
 
-    internal NbtParser(MinecraftEntry minecraftEntry) {
+    internal NbtParser(MinecraftEntry minecraftEntry)
+    {
         _entry = minecraftEntry;
     }
 
-    public NbtReader GetReader(NbtCompression compression = NbtCompression.None) {
-        if (string.IsNullOrEmpty(_nbtFilePath)) {
+    public NbtReader GetReader(NbtCompression compression = NbtCompression.None)
+    {
+        if (string.IsNullOrEmpty(_nbtFilePath))
+        {
             throw new ArgumentNullException(nameof(_nbtFilePath));
         }
 
@@ -28,8 +33,10 @@ public sealed class NbtParser : INbtParser {
         return new NbtReader(fileStream, compression, true);
     }
 
-    public NbtWriter GetWriter(NbtCompression compression = NbtCompression.None) {
-        if (string.IsNullOrEmpty(_nbtFilePath)) {
+    public NbtWriter GetWriter(NbtCompression compression = NbtCompression.None)
+    {
+        if (string.IsNullOrEmpty(_nbtFilePath))
+        {
             throw new ArgumentNullException(nameof(_nbtFilePath));
         }
 
@@ -37,17 +44,20 @@ public sealed class NbtParser : INbtParser {
         return new NbtWriter(fileStream, compression, false);
     }
 
-    public async Task<SaveEntry> ParseSaveAsync(string saveName, bool @bool = true, CancellationToken cancellationToken = default) {
+    public async Task<SaveEntry> ParseSaveAsync(string saveName, bool @bool = true, CancellationToken cancellationToken = default)
+    {
         if (_entry is null)
             throw new InvalidOperationException("Initialization error");
 
         var saveFolder = Path.Combine(_entry.ToWorkingPath(@bool), "saves", saveName);
-        var saveEntry = new SaveEntry {
+        var saveEntry = new SaveEntry
+        {
             FolderName = new DirectoryInfo(saveFolder).Name,
             Folder = saveFolder
         };
 
-        await Task.Run(() => {
+        await Task.Run(() =>
+        {
             var time = DateTime.Now;
 
             using var fileStream = new FileStream(Path.Combine(saveFolder, "level.dat"), FileMode.Open, FileAccess.Read);
@@ -70,7 +80,6 @@ public sealed class NbtParser : INbtParser {
 
             if (File.Exists(Path.Combine(saveFolder, "icon.png")))
                 saveEntry.IconFilePath = Path.Combine(saveFolder, "icon.png");
-
         }, cancellationToken);
 
         return saveEntry;

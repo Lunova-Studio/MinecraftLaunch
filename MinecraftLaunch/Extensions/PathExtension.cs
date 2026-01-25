@@ -2,9 +2,12 @@
 
 namespace MinecraftLaunch.Extensions;
 
-public static class PathExtension {
-    public static string ToPath(this string raw) {
-        if (!Enumerable.Contains(raw, ' ')) {
+public static class PathExtension
+{
+    public static string ToPath(this string raw)
+    {
+        if (!Enumerable.Contains(raw, ' '))
+        {
             return raw;
         }
         return "\"" + raw + "\"";

@@ -3,9 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.JsonConverter;
 
-public sealed class DateTimeJsonConverter : JsonConverter<DateTime> {
-    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
-        if (typeToConvert != typeof(DateTime)) {
+public sealed class DateTimeJsonConverter : JsonConverter<DateTime>
+{
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (typeToConvert != typeof(DateTime))
+        {
             throw new ArgumentException(
                 $"{nameof(DateTimeJsonConverter)} cannot deserialize " +
                 $"an object of {typeToConvert.Name}", nameof(typeToConvert));
@@ -14,7 +17,8 @@ public sealed class DateTimeJsonConverter : JsonConverter<DateTime> {
         return DateTime.Parse(reader.GetString() ?? string.Empty);
     }
 
-    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options) {
+    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+    {
         writer.WriteStringValue(value);
     }
 }

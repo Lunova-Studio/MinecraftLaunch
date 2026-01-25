@@ -1,10 +1,10 @@
-﻿using System.Text;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
-public record CurseforgeModpackInstallEntry {
+public record CurseforgeModpackInstallEntry
+{
     [JsonPropertyName("name")] public string Id { get; set; }
     [JsonPropertyName("author")] public string Author { get; set; }
     [JsonPropertyName("version")] public string Version { get; set; }
@@ -17,12 +17,14 @@ public record CurseforgeModpackInstallEntry {
     [JsonIgnore] public string PrimaryModLoader => Minecraft.ModLoaders?.FirstOrDefault()?["id"]?.GetValue<string>().Split("-")?.First();
 }
 
-public record CurseforgeModpackMinecraftEntry {
+public record CurseforgeModpackMinecraftEntry
+{
     [JsonPropertyName("version")] public string McVersion { get; set; }
     [JsonPropertyName("modLoaders")] public IEnumerable<JsonNode> ModLoaders { get; set; }
 }
 
-public record CurseforgeModpackFileEntry {
+public record CurseforgeModpackFileEntry
+{
     [JsonPropertyName("fileID")] public long FileId { get; set; }
     [JsonPropertyName("projectID")] public long ProjectId { get; set; }
     [JsonPropertyName("required")] public bool IsRequired { get; set; }
