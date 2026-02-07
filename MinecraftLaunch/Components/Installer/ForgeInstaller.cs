@@ -138,12 +138,13 @@ public sealed class ForgeInstaller : InstallerBase {
         return packageFile;
     }
 
-    private (ZipArchive package, JsonDocument installProfile, bool isLegacy) ParseForgePackage(string packageFilePath, CancellationToken cancellationToken) {
+    private (ZipArchive package, /*注意需要释放*/ JsonDocument installProfile, bool isLegacy) ParseForgePackage(string packageFilePath, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.ParsePackage, 0.45d, TaskStatus.Running, 1, 0);
 
         var packageArchive = ZipFile.OpenRead(packageFilePath);
         using var install_profile_json_stream = packageArchive.GetEntry("install_profile.json")?.Open()??throw new Exception("Failed to parse install_profile.json");
+        // 这里转交所有权,不释放
         var installProfileNode = JsonDocument.Parse(install_profile_json_stream);
         var isLegacyForgeVersion = installProfileNode.RootElement.TryGetProperty("install"u8,out _);
 
