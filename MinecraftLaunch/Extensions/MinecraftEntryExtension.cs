@@ -2,9 +2,7 @@
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Utilities;
 using System.IO.Compression;
-using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace MinecraftLaunch.Extensions;
 
@@ -12,25 +10,16 @@ public static class MinecraftEntryExtension {
     public static JavaEntry GetAppropriateJava(this MinecraftEntry minecraft, IEnumerable<JavaEntry> javas) {
         var targetJavaVersion = minecraft.GetAppropriateJavaVersion();
 
-        bool isForgeOrNeoForge = false;
-        List<JavaEntry> possiblyAvailableJavas = [];
+        var isForgeOrNeoForge = false;
 
-        if (minecraft is ModifiedMinecraftEntry modifiedMinecraft) {
-            var loaders = modifiedMinecraft.ModLoaders.Select(x => x.Type);
-            isForgeOrNeoForge = loaders.Contains(ModLoaderType.Forge) || loaders.Contains(ModLoaderType.NeoForge);
+        if (minecraft is ModifiedMinecraftEntry modifiedMinecraft)
+        {
+            isForgeOrNeoForge = modifiedMinecraft.ModLoaders.Any(static x => x.Type is ModLoaderType.Forge or ModLoaderType.NeoForge);
         }
 
-        possiblyAvailableJavas = targetJavaVersion is 0 or -1
-            ? [.. javas]
-            : isForgeOrNeoForge
-                ? [.. javas.Where(x => x.MajorVersion.Equals(targetJavaVersion))]
-                : [.. javas.Where(x => x.MajorVersion >= targetJavaVersion)];
-
-        if (possiblyAvailableJavas.Count == 0)
-            throw new FileNotFoundException($"No suitable version of Java found to start this game, version {targetJavaVersion} is required");
-
-        possiblyAvailableJavas.Reverse();
-        return possiblyAvailableJavas.First();
+        if (targetJavaVersion is 0 or -1) return javas.Last();
+        if (isForgeOrNeoForge) return javas.Last(x => x.MajorVersion == targetJavaVersion);
+        else return javas.Last(x => x.MajorVersion >= targetJavaVersion);
     }
 
     public static int GetAppropriateJavaVersion(this MinecraftEntry minecraft) {
