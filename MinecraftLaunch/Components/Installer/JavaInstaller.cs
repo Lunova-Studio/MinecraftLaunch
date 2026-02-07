@@ -6,6 +6,7 @@ using MinecraftLaunch.Components.Downloader;
 using System.Diagnostics;
 using System.Text.Json.Nodes;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using MinecraftLaunch.Base.EventArgs;
 namespace MinecraftLaunch.Components.Installer;
 
@@ -70,6 +71,7 @@ public sealed class JavaInstaller {
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
+    // TODO USE DOM
     private async Task<JsonNode> FetchJavaInfoAsync(CancellationToken cancellationToken) {
         ReportProgress(InstallStep.FetchingMetadata, 0.1d, TaskStatus.Running, 1, 0);
 
@@ -111,12 +113,18 @@ public sealed class JavaInstaller {
         string extractPath = Path.Combine(JavaFolder, "runtime");
         if (!Directory.Exists(extractPath))
             Directory.CreateDirectory(extractPath);
-    
-        var json = JsonNode.Parse(await File.ReadAllTextAsync(manifestFile.FullName, token).ConfigureAwait(false));
-        var files = json!["files"]!.AsObject();
-    
-        var entries = files.ToList();
-        int totalFiles = entries.Count;
+        await using var stream = File.OpenRead(manifestFile.FullName);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: token);
+        var filesEnumerator = doc.RootElement.GetProperty("files"u8).EnumerateObject();
+
+        int totalFiles = 0;
+        // count total,filesEnumerator咋没暴露计数API(
+        while (!filesEnumerator.MoveNext()) ++totalFiles;
+        filesEnumerator.Dispose();
+        // reset,the iter is supported 
+        filesEnumerator.Reset();
+        
+        
         int completedFiles = 0;
     
         // 并发数来自 DownloadManager
@@ -131,28 +139,31 @@ public sealed class JavaInstaller {
         var tasks = new List<Task>(totalFiles);
     
         long globalDownloadedBytes = 0;
-        var globalStopwatch = Stopwatch.StartNew();
+        var globalStopwatch = Stopwatch.GetTimestamp();
     
-        foreach (var kv in entries) {
-            var fileKey = kv.Key;
-            var fileNode = kv.Value!;
+        foreach (var property in filesEnumerator) {
+            var fileKey = property.Name;
+            var fileElement = property.Value;
     
             tasks.Add(Task.Run(async () => {
                 await semaphore.WaitAsync(token).ConfigureAwait(false);
                 try {
                     string filePath = Path.Combine(extractPath, fileKey);
-                    var fileInfo = fileNode.AsObject();
+                    
     
                     // 目录直接创建
-                    if (fileInfo["type"]?.ToString() == "directory") {
+                    if (fileElement.TryGetProperty("type"u8, out var value) && value.GetString() == "directory")
+                    {
                         Directory.CreateDirectory(filePath);
                         Interlocked.Increment(ref completedFiles);
                         ReportProgressWithSpeed();
                         return;
                     }
-    
-                    string url = fileInfo["downloads"]?["raw"]?["url"]?.ToString()
-                                 ?? throw new InvalidOperationException($"无法解析文件下载 URL: {fileKey}");
+                    
+                    if(!fileElement.TryGetProperty("downloads"u8,out var downloads) ||
+                       !downloads.TryGetProperty("raw"u8,out var raw)||
+                       !raw.TryGetProperty("url"u8,out var urlElement))throw new InvalidOperationException($"无法解析文件下载 URL: {fileKey}");
+                    var url = urlElement.GetString();
                     Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
     
                     var success = false;
@@ -215,7 +226,7 @@ public sealed class JavaInstaller {
                 void ReportProgressWithSpeed(double currentFileProgress = 0.0) {
                     int snap = Volatile.Read(ref completedFiles);
                     double overallProgress = 0.7 + (0.3 * Math.Min((snap + currentFileProgress) / totalFiles, 1.0));
-                    double speed = globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds); // Bytes/s
+                    double speed = globalDownloadedBytes / Math.Max(1.0, Stopwatch.GetElapsedTime(globalStopwatch).Seconds); // Bytes/s
     
                     ReportProgress(
                         InstallStep.DownloadJava,
@@ -243,7 +254,7 @@ public sealed class JavaInstaller {
             TaskStatus.Running,
             totalFiles,
             totalFiles,
-            globalDownloadedBytes / Math.Max(1.0, globalStopwatch.Elapsed.TotalSeconds));
+            globalDownloadedBytes / Math.Max(1.0, Stopwatch.GetElapsedTime(globalStopwatch).Seconds));
     }
     private string GetPlatformKey() {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
