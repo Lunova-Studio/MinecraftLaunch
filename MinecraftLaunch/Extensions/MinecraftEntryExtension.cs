@@ -2,6 +2,8 @@
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Utilities;
 using System.IO.Compression;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace MinecraftLaunch.Extensions;
@@ -35,24 +37,26 @@ public static class MinecraftEntryExtension {
         if (minecraft is ModifiedMinecraftEntry { HasInheritance: true } mc)
             return mc.InheritedMinecraft.GetAppropriateJavaVersion();
 
-        var majorJavaVersionNode = File.ReadAllText(minecraft.ClientJsonPath).AsNode()
-            .Select("javaVersion")?
-            .Select("majorVersion");
-
-        return majorJavaVersionNode is null
-            ? 8
-            : majorJavaVersionNode.GetInt32();
+        using var stream = File.OpenRead(minecraft.ClientJsonPath);
+        using var doc =  JsonDocument.Parse(stream);
+        if (doc.RootElement.TryGetProperty("javaVersion"u8, out var javaVersionElement) &&
+            javaVersionElement.TryGetProperty("majorVersion"u8, out var majorVersionElement))
+        {
+            return majorVersionElement.GetInt32();
+        }
+        return 8;
+        
     }
 
     public static MinecraftClient GetJarElement(this MinecraftEntry entry) {
         string clientJsonPath = entry.ClientJsonPath;
         if (entry is ModifiedMinecraftEntry { HasInheritance: true } inst)
             clientJsonPath = inst.InheritedMinecraft.ClientJsonPath;
-
-        JsonNode clientArtifactNode = File.ReadAllText(clientJsonPath).AsNode().Select("downloads")?.Select("client");
-
-        if (clientArtifactNode is null)
-            return null;
+        using var stream = File.OpenRead(clientJsonPath);
+        using var doc = JsonDocument.Parse(stream);
+        if (!doc.RootElement.TryGetProperty("downloads"u8, out var downloadsElement) ||
+            !downloadsElement.TryGetProperty("client", out var clientArtifactNode)) return null;
+        
 
         string clientJarPath = entry.ClientJarPath;
         if (entry is ModifiedMinecraftEntry { HasInheritance: true } inst_)
@@ -61,11 +65,11 @@ public static class MinecraftEntryExtension {
         if (clientJarPath is null)
             return null;
 
-        long? size = clientArtifactNode.GetInt64("size");
-        string url = clientArtifactNode.GetString("url");
-        string sha1 = clientArtifactNode.GetString("sha1");
+        long size = clientArtifactNode.GetProperty("size"u8).GetInt64();
+        string url = clientArtifactNode.GetProperty("url"u8).GetString();
+        string sha1 = clientArtifactNode.GetProperty("sha1"u8).GetString();
 
-        if (sha1 is null || url is null || size is null)
+        if (sha1 is null || url is null)
             throw new InvalidDataException("Invalid client info");
 
         return new MinecraftClient {
@@ -73,7 +77,7 @@ public static class MinecraftEntryExtension {
             ClientId = Path.GetFileNameWithoutExtension(clientJarPath),
             Url = url,
             Sha1 = sha1,
-            Size = size.Value
+            Size = size
         };
     }
 
@@ -82,16 +86,18 @@ public static class MinecraftEntryExtension {
         string clientJsonPath = minecraftEntry is ModifiedMinecraftEntry { HasInheritance: true } entry
             ? entry.InheritedMinecraft.ClientJsonPath
             : minecraftEntry.ClientJsonPath;
-
+        
         // Parse client.json
-        JsonNode jsonNode = JsonNode.Parse(File.ReadAllText(clientJsonPath));
-        var assetIndex = jsonNode.Select("assetIndex")
-            ?? throw new InvalidDataException("Error in parsing version.json");
+        using var stream = File.OpenRead(clientJsonPath);
+        using var doc = JsonDocument.Parse(stream);
+        var root = doc.RootElement;
+        if(!root.TryGetProperty("assetIndex"u8, out var assetIndex))throw new InvalidDataException("Error in parsing version.json");
+        
 
-        long size = assetIndex.GetInt64("size").Value;
-        string id = assetIndex.GetString("id") ?? throw new InvalidDataException();
-        string url = assetIndex.GetString("url") ?? throw new InvalidDataException();
-        string sha1 = assetIndex.GetString("sha1") ?? throw new InvalidDataException();
+        long size = assetIndex.GetProperty("size"u8).GetInt64();
+        string id = assetIndex.GetProperty("id"u8).GetString() ?? throw new InvalidDataException();
+        string url = assetIndex.GetProperty("url"u8).GetString() ?? throw new InvalidDataException();
+        string sha1 = assetIndex.GetProperty("sha1"u8).GetString() ?? throw new InvalidDataException();
 
         return new AssstIndex {
             Id = id,
