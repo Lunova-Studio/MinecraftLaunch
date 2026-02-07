@@ -81,6 +81,7 @@ public abstract class MinecraftEntry {
             assetIndexJsonPath = instance.InheritedMinecraft.AssetIndexJsonPath;
 
         // Parse asset index json
+        // TODO USE DOM
         JsonNode jsonNode = JsonNode.Parse(File.ReadAllText(assetIndexJsonPath));
         Dictionary<string, AssetJsonEntry> assets = jsonNode?["objects"]?
             .Deserialize(AssetJsonEntryContext.Default.DictionaryStringAssetJsonEntry)
@@ -99,7 +100,7 @@ public abstract class MinecraftEntry {
             };
         }
     }
-
+    // TODO  USE DOM
     public (IEnumerable<MinecraftLibrary> Libraries, IEnumerable<MinecraftLibrary> NativeLibraries) GetRequiredLibraries() {
         List<MinecraftLibrary> libs = [];
         List<MinecraftLibrary> nativeLibs = [];
@@ -237,7 +238,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
             throw new InvalidDataException("Invalid library name");
 
         if (libNode.NativeClassifierNames is not null)
-            libNode.MavenName += ":" + libNode.NativeClassifierNames[EnvironmentUtil.GetPlatformName()].Replace("${arch}", EnvironmentUtil.Arch);
+            libNode.MavenName += ":" + libNode.NativeClassifierNames[EnvironmentUtil.GetPlatformName()].Replace("${arch}", EnvironmentUtil.Arch,StringComparison.Ordinal);
 
         if (libNode.DownloadInformation != null) {
             DownloadArtifactEntry artifactNode = GetLibraryArtifactInfo(libNode);
@@ -246,7 +247,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
 
             #region Vanilla Pattern
 
-            if (artifactNode.Url.StartsWith("https://libraries.minecraft.net/")) {
+            if (artifactNode.Url.StartsWith("https://libraries.minecraft.net/", StringComparison.Ordinal)) {
                 return new VanillaLibrary(libNode.MavenName) {
                     MinecraftFolderPath = minecraftFolderPath,
                     Sha1 = artifactNode.Sha1,
@@ -258,8 +259,8 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
             #endregion
 
             #region Forge Pattern
-
-            if (artifactNode.Url.StartsWith("https://maven.minecraftforge.net/")) {
+            
+            if (artifactNode.Url.StartsWith("https://maven.minecraftforge.net/", StringComparison.Ordinal)) {
                 return new ForgeLibrary(libNode.MavenName) {
                     MinecraftFolderPath = minecraftFolderPath,
                     Sha1 = artifactNode.Sha1,
@@ -273,7 +274,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
 
             #region NeoForge Pattern
 
-            if (artifactNode.Url.StartsWith("https://maven.neoforged.net/")) {
+            if (artifactNode.Url.StartsWith("https://maven.neoforged.net/", StringComparison.Ordinal)) {
                 return new NeoForgeLibrary(libNode.MavenName) {
                     MinecraftFolderPath = minecraftFolderPath,
                     Sha1 = artifactNode.Sha1,
@@ -288,8 +289,8 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
 
         #region Other Patterns
 
-        if (libNode.MavenName.StartsWith("net.minecraft:launchwrapper")) {
-            return new DownloadableDependency(libNode.MavenName, $"https://libraries.minecraft.net/{GetLibraryPath(libNode.MavenName).Replace("\\", "/")}") {
+        if (libNode.MavenName.StartsWith("net.minecraft:launchwrapper", StringComparison.Ordinal)) {
+            return new DownloadableDependency(libNode.MavenName, $"https://libraries.minecraft.net/{GetLibraryPath(libNode.MavenName).Replace('\\', '/')}") {
                 MinecraftFolderPath = minecraftFolderPath,
                 IsNativeLibrary = libNode.NativeClassifierNames is not null
             };
