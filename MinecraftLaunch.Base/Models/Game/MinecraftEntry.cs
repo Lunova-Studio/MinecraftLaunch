@@ -81,11 +81,17 @@ public abstract class MinecraftEntry {
             assetIndexJsonPath = instance.InheritedMinecraft.AssetIndexJsonPath;
 
         // Parse asset index json
-        // TODO USE DOM
-        JsonNode jsonNode = JsonNode.Parse(File.ReadAllText(assetIndexJsonPath));
-        Dictionary<string, AssetJsonEntry> assets = jsonNode?["objects"]?
-            .Deserialize(AssetJsonEntryContext.Default.DictionaryStringAssetJsonEntry)
-            ?? throw new InvalidDataException("Error in parsing asset index json file");
+        Dictionary<string, AssetJsonEntry> assets;
+        // 这里不用using表达式语法是为了在yield前释放资源,防止被挂起导致池化内存压力增大
+        using (var stream = File.OpenRead(assetIndexJsonPath))
+        using (var doc = JsonDocument.Parse(stream))
+        {
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("objects"u8, out var value))
+                throw new InvalidDataException("Error in parsing asset index json file");
+            assets = value.Deserialize(AssetJsonEntryContext.Default.DictionaryStringAssetJsonEntry)
+                     ?? throw new InvalidDataException("Error in parsing asset index json file");
+        }
 
         // Parse GameAsset objects
         foreach (var (key, assetJsonNode) in assets) {
@@ -100,7 +106,7 @@ public abstract class MinecraftEntry {
             };
         }
     }
-    // TODO  USE DOM
+    
     public (IEnumerable<MinecraftLibrary> Libraries, IEnumerable<MinecraftLibrary> NativeLibraries) GetRequiredLibraries() {
         List<MinecraftLibrary> libs = [];
         List<MinecraftLibrary> nativeLibs = [];
