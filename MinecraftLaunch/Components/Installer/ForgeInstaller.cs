@@ -40,23 +40,31 @@ public sealed class ForgeInstaller : InstallerBase {
 
         ReportProgress(InstallStep.Started, 0.0d, TaskStatus.WaitingToRun, 1, 1);
 
-        try {
+        try
+        {
             inheritedEntry = ParseMinecraft(cancellationToken);
             forgePackageFile = await DownloadForgePackageAsync(cancellationToken);
 
             var (package, installProfile, isLegacy) = ParseForgePackage(forgePackageFile.FullName, cancellationToken);
-            var forgeClientFile = await WriteVersionJsonAndSomeDependenciesAsync(isLegacy, installProfile, package, cancellationToken);
+            using(var doc = installProfile){
+                var forgeClientFile =
+                    await WriteVersionJsonAndSomeDependenciesAsync(isLegacy, doc.RootElement, package,
+                        cancellationToken);
 
-            entry = ParseModifiedMinecraft(forgeClientFile, cancellationToken);
-            await CompleteForgeDependenciesAsync(isLegacy, installProfile, entry, cancellationToken);
+                entry = ParseModifiedMinecraft(forgeClientFile, cancellationToken);
+                await CompleteForgeDependenciesAsync(isLegacy, doc.RootElement, entry, cancellationToken);
 
-            if (!isLegacy) {
-                await RunInstallProcessorAsync(forgePackageFile.FullName, installProfile, entry, cancellationToken);
+                if (!isLegacy)
+                {
+                    await RunInstallProcessorAsync(forgePackageFile.FullName, doc.RootElement, entry, cancellationToken);
+                }
             }
 
             ReportProgress(InstallStep.RanToCompletion, 1.0d, TaskStatus.RanToCompletion, 1, 1);
             ReportCompleted(true);
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
         }
@@ -130,50 +138,46 @@ public sealed class ForgeInstaller : InstallerBase {
         return packageFile;
     }
 
-    private (ZipArchive package, JsonNode installProfile, bool isLegacy) ParseForgePackage(string packageFilePath, CancellationToken cancellationToken) {
+    private (ZipArchive package, JsonDocument installProfile, bool isLegacy) ParseForgePackage(string packageFilePath, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.ParsePackage, 0.45d, TaskStatus.Running, 1, 0);
 
         var packageArchive = ZipFile.OpenRead(packageFilePath);
-        var installProfileNode = packageArchive
-            .GetEntry("install_profile.json")
-            ?.ReadAsString()
-            .AsNode()
-            ?? throw new Exception("Failed to parse install_profile.json");
-
-        bool isLegacyForgeVersion = installProfileNode.Select("install") != null;
+        using var install_profile_json_stream = packageArchive.GetEntry("install_profile.json")?.Open()??throw new Exception("Failed to parse install_profile.json");
+        var installProfileNode = JsonDocument.Parse(install_profile_json_stream);
+        var isLegacyForgeVersion = installProfileNode.RootElement.TryGetProperty("install"u8,out _);
 
         ReportProgress(InstallStep.ParsePackage, 0.50d, TaskStatus.Running, 1, 1);
         return (packageArchive, installProfileNode, isLegacyForgeVersion);
     }
 
-    private async Task<FileInfo> WriteVersionJsonAndSomeDependenciesAsync(bool isLegacyForgeVersion, JsonNode installProfile, ZipArchive packageArchive, CancellationToken cancellationToken) {
+    private async Task<FileInfo> WriteVersionJsonAndSomeDependenciesAsync(bool isLegacyForgeVersion, JsonElement installProfile, ZipArchive packageArchive, CancellationToken cancellationToken) {
         string forgeVersion = $"{Entry.McVersion}-{Entry.ForgeVersion}";
         string forgeLibsFolder = Path.Combine(MinecraftFolder, "libraries\\net\\minecraftforge\\forge", forgeVersion);
 
         ReportProgress(InstallStep.WriteVersionJsonAndSomeDependencies, 0.50d, TaskStatus.Running, 1, 0);
 
         if (isLegacyForgeVersion) {
-            var universalFilePath = installProfile.Select("install").GetString("filePath")
-                ?? throw new InvalidDataException("Unable to resolve location of universal file in archive");
-
-            var universalFileEntry = packageArchive.GetEntry(universalFilePath)
+            if(!installProfile.GetProperty("install"u8).TryGetProperty("filePath"u8,out var filePath))throw new InvalidDataException("Unable to resolve location of universal file in archive");
+            
+            var universalFileEntry = packageArchive.GetEntry(filePath.GetString()!)
                 ?? throw new FileNotFoundException("The universal file was not found in the archive");
 
-            universalFileEntry.ExtractTo(Path.Combine(forgeLibsFolder, universalFileEntry.Name.Replace("-universal", string.Empty)));
+            universalFileEntry.ExtractTo(Path.Combine(forgeLibsFolder, universalFileEntry.Name.Replace("-universal", string.Empty,StringComparison.Ordinal)));
         }
 
         if (packageArchive.GetEntry($"maven/net/minecraftforge/forge/{forgeVersion}/") != null)
-            foreach (var entry in packageArchive.Entries.Where(x => !x.FullName.EndsWith('/') && x.FullName.StartsWith($"maven/net/minecraftforge/forge/{forgeVersion}")))
+            foreach (var entry in packageArchive.Entries.Where(x => !x.FullName.EndsWith('/') && x.FullName.StartsWith($"maven/net/minecraftforge/forge/{forgeVersion}", StringComparison.Ordinal)))
                 entry.ExtractTo(Path.Combine(forgeLibsFolder, entry.Name));
 
         packageArchive.GetEntry("data/client.lzma")?.ExtractTo(Path.Combine(forgeLibsFolder, $"forge-{forgeVersion}-clientdata.lzma"));
-
-        string jsonContent = (isLegacyForgeVersion
-            ? installProfile.Select("versionInfo")!.ToString()
-            : packageArchive.GetEntry("version.json")?.ReadAsString())
-            ?? throw new Exception("Failed to read version.json");
+        
+        var jsonContent = (isLegacyForgeVersion
+                              ? installProfile.GetProperty("versionInfo"u8).GetString()
+                              : packageArchive.GetEntry("version.json")?.ReadAsString())
+                          ?? throw new Exception("Failed to read version.json");
         var jsonNode = JsonNode.Parse(jsonContent);
+        
 
         string entryId = CustomId ?? $"{Entry.McVersion}-{(Entry.IsNeoforge ? "neoforge" : "forge")}-{Entry.ForgeVersion}";
         var jsonFile = new FileInfo(Path.Combine(MinecraftFolder, "versions", entryId, $"{entryId}.json"));
@@ -188,7 +192,7 @@ public sealed class ForgeInstaller : InstallerBase {
         return jsonFile;
     }
 
-    private async Task CompleteForgeDependenciesAsync(bool isLegacyForgeVersion, JsonNode installProfile, MinecraftEntry minecraft, CancellationToken cancellationToken) {
+    private async Task CompleteForgeDependenciesAsync(bool isLegacyForgeVersion, JsonElement installProfile, MinecraftEntry minecraft, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
         ReportProgress(InstallStep.DownloadLibraries, 0.50d, TaskStatus.Running, 1, 0);
 
@@ -203,7 +207,7 @@ public sealed class ForgeInstaller : InstallerBase {
         dependencies.AddRange(libraries);
 
         if (!isLegacyForgeVersion) {
-            var processorLibraries = installProfile.Select("libraries")
+            var processorLibraries = installProfile.GetProperty("libraries"u8)
                 .Deserialize(LibraryEntryContext.Default.IEnumerableLibraryEntry)?
                 .Select(lib => MinecraftLibrary.ParseJsonNode(lib, MinecraftFolder))
                 ?? throw new InvalidDataException();
@@ -227,11 +231,11 @@ public sealed class ForgeInstaller : InstallerBase {
         //    throw new InvalidOperationException("Some dependent files encountered errors during download");
     }
 
-    private async Task RunInstallProcessorAsync(string packageFilePath, JsonNode installProfile, MinecraftEntry entry, CancellationToken cancellationToken) {
+    private async Task RunInstallProcessorAsync(string packageFilePath, JsonElement installProfile, MinecraftEntry entry, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
 
-        Dictionary<string, Dictionary<string, string>> forgeDataDictionary = installProfile.Select("data")
-            .Deserialize(ForgeInstallerContext.Default.DictionaryStringDictionaryStringString)
+        Dictionary<string, Dictionary<string, string>> forgeDataDictionary = 
+            installProfile.GetProperty("data"u8).Deserialize(ForgeInstallerContext.Default.DictionaryStringDictionaryStringString)
             ?? throw new Exception("Failed to parse install profile data");
 
         string forgeVersion = $"{Entry.McVersion}-{Entry.ForgeVersion}";
@@ -259,8 +263,8 @@ public sealed class ForgeInstaller : InstallerBase {
                     .FormatLibraryNameToRelativePath())
                     .ToPath();
             });
-
-        var forgeProcessors = installProfile.Select("processors")?
+        if (!installProfile.TryGetProperty("processors"u8,out var processorsEntry)) throw new InvalidDataException("Unable to parse Forge Processors");
+        var forgeProcessors = processorsEntry
             .Deserialize(ForgeInstallerContext.Default.IEnumerableForgeProcessorData)?
             .Where(x => !(x.Sides.Count == 1 && x.Sides.Contains("server")))
             .ToArray()
@@ -314,13 +318,13 @@ public sealed class ForgeInstaller : InstallerBase {
                 RedirectStandardError = true,
                 RedirectStandardOutput = true
             }) ?? throw new Exception("Failed to start Java");
-
-            List<string> _errorOutputs = [];
-
-            process.ErrorDataReceived += (_, args) => {
-                if (args.Data is string data && !string.IsNullOrEmpty(data))
-                    _errorOutputs.Add(args.Data);
-            };
+//            TODO Maybe it is Xilu's Todo event 
+//            List<string> _errorOutputs = [];
+//
+//            process.ErrorDataReceived += (_, arg) => {
+//                if (arg.Data is not null && !string.IsNullOrEmpty(arg.Data))
+//                    _errorOutputs.Add(arg.Data);
+//            };
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
