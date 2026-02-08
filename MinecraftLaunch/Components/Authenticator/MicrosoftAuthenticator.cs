@@ -201,7 +201,7 @@ public sealed class MicrosoftAuthenticator {
         {
             using var profileNode = await JsonDocument.ParseAsync(await profileRes.GetStreamAsync(),
                 cancellationToken: cancellationToken);
-            return new MicrosoftAccount(profileNode.RootElement.GetProperty("name"u8).GetString(), Guid.Parse(profileNode.RootElement.GetProperty("id"u8).GetString()!), accessToken, refreshToken, DateTime.Now);
+            return new MicrosoftAccount(profileNode.RootElement.GetProperty("name"u8).GetString(), profileNode.RootElement.GetProperty("id"u8).GetGuid(), accessToken, refreshToken, DateTime.Now);
         }
         catch (Exception e)
         {
