@@ -111,8 +111,11 @@ public abstract class MinecraftEntry {
         List<MinecraftLibrary> libs = [];
         List<MinecraftLibrary> nativeLibs = [];
 
-        var libNodes = JsonNode.Parse(File.ReadAllText(ClientJsonPath))?["libraries"]?
-            .Deserialize(LibraryEntriesContext.Default.IEnumerableLibraryEntry)
+        using var stream =  File.OpenRead(ClientJsonPath);
+        using var doc = JsonDocument.Parse(stream);
+        var root = doc.RootElement;
+        if(!root.TryGetProperty("libraries"u8,out var librariesElement))throw new InvalidDataException("client.json does not contain library information");
+        var libNodes = librariesElement.Deserialize(LibraryEntriesContext.Default.IEnumerableLibraryEntry)
                 ?? throw new InvalidDataException("client.json does not contain library information");
 
         foreach (var libNode in libNodes) {
@@ -120,7 +123,7 @@ public abstract class MinecraftEntry {
                 continue;
 
             // Check if a library is enabled
-            if (libNode.Rules is IEnumerable<RuleEntry> libRules) {
+            if (libNode.Rules is { } libRules) {
                 if (!IsLibraryEnabled(libRules))
                     continue;
             }

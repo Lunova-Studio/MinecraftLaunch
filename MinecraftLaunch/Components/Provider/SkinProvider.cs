@@ -1,8 +1,9 @@
-﻿using Flurl.Http;
+﻿using System.Diagnostics;
+using Flurl.Http;
 using MinecraftLaunch.Base.Models.Authentication;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
-using System.Text;
+using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Provider;
 
@@ -23,19 +24,25 @@ public sealed class SkinProvider {
     }
 
     private static async Task<Stream> GetSkinDataAsync(string url, CancellationToken cancellationToken) {
-        var baseJson = await HttpUtil.Request(url).GetStringAsync(cancellationToken: cancellationToken);
-        var baseNode = baseJson?.AsNode();
+        await using var stream = await HttpUtil.Request(url).GetStreamAsync(cancellationToken: cancellationToken);
+        byte[] base64;
+        using (var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken))
+        {
+            var baseNode = doc.RootElement;
 
-        var base64 = baseNode?.GetEnumerable("properties")
-            ?.FirstOrDefault()
-            ?.GetString("value");
+            var nullableBase64Element = baseNode.GetPropertyNullable("properties"u8);
+            Debug.Assert(nullableBase64Element?.ValueKind is null or JsonValueKind.Array);
+            base64 = nullableBase64Element?[0].GetPropertyNullable("value"u8)?.GetBytesFromBase64() ?? throw new InvalidOperationException();
+        }
+        using var skinDoc = JsonDocument.Parse(base64);
+        
+        var skinNode = skinDoc.RootElement;
 
-        var skinJson = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
-        var skinNode = skinJson.AsNode();
-
-        var skinUrl = skinNode?.Select("textures")?
-            .Select("SKIN")?
-            .GetString("url");
+        var skinUrl = skinNode
+            .GetPropertyNullable("textures"u8)?
+            .GetPropertyNullable("SKIN"u8)?
+            .GetPropertyNullable("url"u8)?
+            .GetString();
 
         return await HttpUtil.Request(skinUrl).GetStreamAsync(cancellationToken: cancellationToken);
     }

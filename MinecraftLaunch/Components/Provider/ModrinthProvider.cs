@@ -210,7 +210,7 @@ public sealed class ModrinthProvider {
         Debug.Assert(node.ValueKind == JsonValueKind.Object);
         var filesElement = node.GetProperty("files"u8);
         Debug.Assert(filesElement.ValueKind == JsonValueKind.Array);
-        JsonElement primaryFileNode = filesElement[0];
+        var primaryFileNode = filesElement[0];
         foreach (var item in filesElement.EnumerateArray())
         {
             if (!item.TryGetProperty("primary"u8, out var isPrimaryElement) || !isPrimaryElement.GetBoolean()) continue;
