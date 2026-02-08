@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Flurl;
 using Flurl.Http;
 using MinecraftLaunch.Base.Enums;
@@ -5,7 +6,7 @@ using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
 using System.Net.Http.Json;
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Web;
@@ -23,31 +24,53 @@ public sealed class CurseforgeProvider {
             CurseforgeRequestPayloadContext.Default.CurseforgeFingerprintsRequestPayload),
                 cancellationToken: cancellationToken);
 
-        var json = await responseMessage.GetStringAsync();
-        var jsonNode = json.AsNode()
-            .Select("data");
+        await using var stream = await responseMessage.GetStreamAsync();
+        using var doc  = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var exactMatches = doc.RootElement.GetPropertyNullable("data"u8)?.GetPropertyNullable("exactMatches");
+        
+        // 此处对API行为有变更,document会释放所以需要立即终结迭代器,不能延迟执行
+        return exactMatches?
+            .EnumerateObject()
+            .ToDictionary(
+                // key为null那本来也要抛出了,所以就不做检查
+                keySelector: x => ParseFile(x.Value.GetProperty("file"u8)),
+                // 这里需要立即终结迭代器,不能延迟
+                elementSelector: IEnumerable<CurseforgeResourceFile> /*写明返回类型*/
+                    (y) => ProvideResources(y.Value)
+            );
 
-        var exactMatches = jsonNode.GetEnumerable("exactMatches");
-        if (exactMatches is null)
-            return null;
+        static CurseforgeResourceFile[] ProvideResources(JsonElement propertyElement)
+        {
+            var latestFilesElement = propertyElement.GetProperty("latestFiles"u8);
+            var length = latestFilesElement.GetArrayLength();
+            var result = new CurseforgeResourceFile[length];
+            var offset = 0;
+            foreach (var item in latestFilesElement.EnumerateArray())
+            {
+                result[offset] = ParseFile(item);
+                offset++;
+            }
 
-        return exactMatches.ToDictionary(x => ParseFile(x.Select("file")),
-            x1 => x1.GetEnumerable("latestFiles").Select(ParseFile));
+            return result;
+        }
     }
 
-    public async Task<IEnumerable<CurseforgeResource>> GetResourcesByModIdsAsync(IEnumerable<long> modIds, CancellationToken cancellationToken = default) {
+    public Task<IEnumerable<CurseforgeResource>> GetResourcesByModIdsAsync(IEnumerable<long> modIds,
+        CancellationToken cancellationToken = default) =>
+        /*转移到long[]重载*/GetResourcesByModIdsAsync([..modIds], cancellationToken);
+    public async Task<IEnumerable<CurseforgeResource>> GetResourcesByModIdsAsync(long[] modIds, CancellationToken cancellationToken = default) {
         var request = CreateRequest("mods");
-        var payload = new CurseforgeResourcesRequestPayload([.. modIds]);
+        var payload = new CurseforgeResourcesRequestPayload(modIds);
 
         using var responseMessage = await request.PostAsync(JsonContent.Create(payload,
             CurseforgeRequestPayloadContext.Default.CurseforgeResourcesRequestPayload),
                 cancellationToken: cancellationToken);
 
-        var json = await responseMessage.GetStringAsync();
-        var jsonNode = json.AsNode()
-            .Select("data");
-
-        return jsonNode.GetEnumerable().Select(Parse);
+        await using var stream = await responseMessage.GetStreamAsync();
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var dataElement = doc.RootElement.GetProperty("data"u8);
+        // 终结迭代器操作,Document不适用LINQ
+        return dataElement.EnumerateArrayThenSelectToArray(Parse);
     }
 
     public async Task<IEnumerable<CurseforgeResource>> GetFeaturedResourcesAsync(CancellationToken cancellationToken = default) {
@@ -57,21 +80,28 @@ public sealed class CurseforgeProvider {
         using var responseMessage = await request.PostAsync(JsonContent.Create(payload,
             CurseforgeRequestPayloadContext.Default.CurseforgeFeaturedRequestPayload),
                 cancellationToken: cancellationToken);
+        await using var stream = await responseMessage.GetStreamAsync();
+        using var doc  = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var dataElement = doc.RootElement.GetProperty("data"u8);
 
-        var jsonNode = (await responseMessage.GetStringAsync())
-            .AsNode()
-            .Select("data");
+        var popular = dataElement.GetPropertyNullable("popular");
+        var featured = dataElement.GetPropertyNullable("featured");
 
-        var popular = jsonNode.GetEnumerable("popular");
-        var featured = jsonNode.GetEnumerable("featured");
+        
+        if (popular is null || featured is null) return [];
+        // 使用HashSet去重
+        var length = popular.Value.GetArrayLength() + featured.Value.GetArrayLength();
+        var source = new HashSet<CurseforgeResource>(length);
+        foreach (var item in popular.Value.EnumerateArray())
+        {
+            source.Add(Parse(item));
+        }
+        foreach (var item in featured.Value.EnumerateArray())
+        {
+            source.Add(Parse(item));
+        }
 
-        IEnumerable<JsonNode> resources;
-        if (popular is not null && featured is not null)
-            resources = popular.Union(featured);
-        else
-            return [];
-
-        return resources.Select(Parse);
+        return source;
     }
 
     public async Task<IEnumerable<CurseforgeResource>> SearchResourcesAsync(
@@ -96,13 +126,17 @@ public sealed class CurseforgeProvider {
         if (modLoaderType != ModLoaderType.Any && modLoaderType != ModLoaderType.Unknown)
             url.SetQueryParam("modLoaderType", (int)modLoaderType);
 
-        var json = await CreateRequest(url).GetStringAsync(cancellationToken: cancellationToken);
-        var jsonNode = json.AsNode();
-
-        if (jsonNode == null)
+        try
+        {
+            await using var stream = await CreateRequest(url).GetStreamAsync(cancellationToken: cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            return doc.RootElement.GetProperty("data"u8).EnumerateArrayThenSelectToArray(Parse);
+        }
+        // 这个只是为了和原API保持一致加的
+        catch
+        {
             return [];
-
-        return jsonNode.GetEnumerable("data").Select(Parse);
+        }
     }
 
     public async Task<IEnumerable<CurseforgeResource>> SearchResourcesAsync(
@@ -125,13 +159,17 @@ public sealed class CurseforgeProvider {
         if (modLoaderType != ModLoaderType.Any && modLoaderType != ModLoaderType.Unknown)
             url.SetQueryParam("modLoaderType", (int)modLoaderType);
 
-        var json = await CreateRequest(url).GetStringAsync(cancellationToken: cancellationToken);
-        var jsonNode = json.AsNode();
-
-        if (jsonNode == null)
+        try
+        {
+            await using var stream = await CreateRequest(url).GetStreamAsync(cancellationToken: cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            return doc.RootElement.GetProperty("data"u8).EnumerateArrayThenSelectToArray(Parse);
+        }
+        // 这个只是为了和原API保持一致加的
+        catch
+        {
             return [];
-
-        return jsonNode.GetEnumerable("data").Select(Parse);
+        }
     }
 
     #region Private and internals
@@ -193,46 +231,74 @@ public sealed class CurseforgeProvider {
         throw new InvalidOperationException();
     }
 
-    private static CurseforgeResource Parse(JsonNode node) {
+    private static CurseforgeResource Parse(JsonElement resElement)
+    {
         return new CurseforgeResource {
-            Id = node.GetInt32("id"),
-            ClassId = node.GetInt32("classId"),
-            DownloadCount = node.GetInt32("downloadCount"),
-            Name = node.GetString("name"),
-            Slug = node.GetString("slug"),
-            Summary = node.GetString("summary"),
-            DateModified = node.GetDateTime("dateModified"),
-            IconUrl = node.Select("logo").GetString("thumbnailUrl"),
-            WebsiteUrl = node.Select("links").GetString("websiteUrl"),
-            Authors = node.GetEnumerable<string>("authors", "name"),
-            Categories = node.GetEnumerable<string>("categories", "name"),
-            Screenshots = node.GetEnumerable<string>("screenshots", "url"),
-            LatestFiles = node.GetEnumerable("latestFiles").Select(ParseFile),
-            MinecraftVersions = node.GetEnumerable<string>("latestFilesIndexes", "gameVersion").Distinct()
+            Id = resElement.GetProperty("id"u8).GetInt32(),
+            ClassId = resElement.GetProperty("classId"u8).GetInt32(),
+            DownloadCount = resElement.GetProperty("downloadCount"u8).GetInt32(),
+            Name = resElement.GetProperty("name"u8).GetString(),
+            Slug = resElement.GetProperty("slug"u8).GetString(),
+            Summary = resElement.GetProperty("summary"u8).GetString(),
+            DateModified = resElement.GetProperty("dateModified"u8).GetDateTime(),
+            IconUrl = resElement.GetProperty("logo"u8).GetProperty("thumbnailUrl"u8).GetString(),
+            WebsiteUrl = resElement.GetProperty("links"u8).GetProperty("websiteUrl"u8).GetString(),
+            Authors = resElement.GetProperty("authors"u8).EnumerateArrayThenSelectNotNullStringPropertyWithNotNullAndNotEmptyValueThenToArray("name"u8),
+            Categories = resElement.GetProperty("categories"u8).EnumerateArrayThenSelectNotNullStringPropertyWithNotNullAndNotEmptyValueThenToArray("name"u8),
+            Screenshots = resElement.GetProperty("screenshots"u8).EnumerateArrayThenSelectNotNullStringPropertyWithNotNullAndNotEmptyValueThenToArray("url"u8),
+            LatestFiles = resElement.GetProperty("latestFiles"u8).EnumerateArrayThenSelectToArray(ParseFile),
+            MinecraftVersions = resElement.GetProperty("latestFilesIndexes"u8)
+                .EnumerateArrayThenSelectToArray(x => x.GetProperty("gameVersion"u8).GetString())
+                .Distinct()
         };
+        
+
+        
     }
 
-    private static CurseforgeResourceFile ParseFile(JsonNode node) {
-        return node is null ? null : new CurseforgeResourceFile {
-            Id = node.GetInt32("id"),
-            ModId = node.GetInt32("modId"),
-            GameId = node.GetInt32("gameId"),
-            FileName = node.GetString("fileName"),
-            Published = node.GetDateTime("fileDate"),
-            IsAvailable = node.GetBool("isAvailable"),
-            DisplayName = node.GetString("displayName"),
-            IsServerPack = node.GetBool("isServerPack"),
-            DownloadUrl = node.GetString("downloadUrl"),
-            DownloadCount = node.GetInt32("downloadCount"),
-            AlternateFileId = node.GetInt32("alternateFileId"),
-            FileFingerprint = node.GetUInt32("fileFingerprint"),
-            GameVersions = node.GetEnumerable<string>("gameVersions"),
-            IsApproved = node.GetInt32("fileStatus") is 4,
-            FileLength = node.GetInt64("fileLength").Value,
-            ReleaseType = (FileReleaseType)node.GetInt32("releaseType"),
-            Sha1 = node.GetEnumerable("hashes").FirstOrDefault(x => x.GetInt32("algo") == 1).GetString("value"),
-            Dependencies = node.GetEnumerable("dependencies").DistinctBy(x => x.GetInt32("modId")).ToDictionary(x => x.GetInt32("modId"), x => (DependencyType)x.GetInt32("relationType")),
+    private static CurseforgeResourceFile ParseFile(JsonElement node) {
+        return new CurseforgeResourceFile {
+            Id = node.GetProperty("id"u8).GetInt32(),
+            ModId = node.GetProperty("modId"u8).GetInt32(),
+            GameId = node.GetProperty("gameId"u8).GetInt32(),
+            FileName = node.GetProperty("fileName"u8).GetString(),
+            Published = node.GetProperty("fileDate"u8).GetDateTime(),
+            IsAvailable = node.GetProperty("isAvailable"u8).GetBoolean(),
+            DisplayName = node.GetProperty("displayName"u8).GetString(),
+            IsServerPack = node.GetProperty("isServerPack"u8).GetBoolean(),
+            DownloadUrl = node.GetProperty("downloadUrl"u8).GetString(),
+            DownloadCount = node.GetProperty("downloadCount"u8).GetInt32(),
+            AlternateFileId = node.GetProperty("alternateFileId"u8).GetInt32(),
+            FileFingerprint = node.GetProperty("fileFingerprint"u8).GetUInt32(),
+            GameVersions = node.GetProperty("gameVersions"u8).EnumerateArrayThenSelectToArray(static i=>i.GetString()),
+            IsApproved = node.GetProperty("fileStatus"u8).GetInt32() is 4,
+            FileLength = node.GetProperty("fileLength"u8).GetInt64(),
+            ReleaseType = (FileReleaseType)node.GetProperty("releaseType"u8).GetInt32(),
+            // 手写目的在于防止LINQ访问被释放的资源,必须全量加载
+            Sha1 = ProvideSha(node.GetProperty("hashes"u8)),
+            Dependencies = ProvideDependencies(node.GetProperty("dependencies"u8))
+                
         };
+
+        
+        static Dictionary<int, DependencyType> ProvideDependencies(JsonElement dependenciesArrayElement)
+        {
+            return dependenciesArrayElement.EnumerateArray()
+                .DistinctBy(x => x.GetProperty("modId"u8).GetInt32())
+                .ToDictionary(
+                    x => x.GetProperty("modId"u8).GetInt32(),
+                    x => (DependencyType)x.GetProperty("relationType"u8).GetInt32()
+                );
+        }
+        static string ProvideSha(JsonElement hashesArrayNode)
+        {
+            foreach (var node in hashesArrayNode.EnumerateArray())
+            {
+                if (!node.TryGetProperty("algo"u8,out var algoElement))continue;
+                if (algoElement.GetInt32() is 1) return node.GetProperty("value"u8).GetString();
+            }
+            return string.Empty;
+        }
     }
 
     private static IFlurlRequest CreateRequest(Url url) {
