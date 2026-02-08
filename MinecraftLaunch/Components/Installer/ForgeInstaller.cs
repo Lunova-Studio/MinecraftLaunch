@@ -177,9 +177,10 @@ public sealed class ForgeInstaller : InstallerBase {
                               ? installProfile.GetProperty("versionInfo"u8).GetString()
                               : packageArchive.GetEntry("version.json")?.ReadAsString())
                           ?? throw new Exception("Failed to read version.json");
+        // not TO DO,据测量这里的开销占比较小,不是很值得手写patch
         var jsonNode = JsonNode.Parse(jsonContent);
         
-
+        
         string entryId = CustomId ?? $"{Entry.McVersion}-{(Entry.IsNeoforge ? "neoforge" : "forge")}-{Entry.ForgeVersion}";
         var jsonFile = new FileInfo(Path.Combine(MinecraftFolder, "versions", entryId, $"{entryId}.json"));
 

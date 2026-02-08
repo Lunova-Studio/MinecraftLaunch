@@ -7,7 +7,8 @@ using MinecraftLaunch.Components.Parser;
 using MinecraftLaunch.Extensions;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Runtime.CompilerServices;
+
+using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Installer;
 
@@ -174,9 +175,9 @@ public sealed class OptifineInstaller : InstallerBase {
             MainClass = "net.minecraft.launchwrapper.Launch",
             MinecraftArguments = "--tweakClass optifine.OptiFineTweaker"
         };
-
-        await File.WriteAllTextAsync(jsonFile.FullName,
-            jsonEntry.Serialize(MinecraftJsonEntryContext.Default.OptifineMinecraftEntry), cancellationToken);
+        await using var output = File.OpenWrite(jsonFile.FullName);
+        await JsonSerializer.SerializeAsync(output, jsonEntry, MinecraftJsonEntryContext.Default.OptifineMinecraftEntry,
+            cancellationToken);
 
         if (minecraft.ClientJarPath is null || !File.Exists(minecraft.ClientJarPath))
             throw new FileNotFoundException("Unable to find the original client client.jar file");

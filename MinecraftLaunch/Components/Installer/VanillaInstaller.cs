@@ -62,14 +62,15 @@ public sealed class VanillaInstaller : InstallerBase {
         ReportProgress(InstallStep.DownloadVersionJson, 0.15d, TaskStatus.Running, 1, 0);
 
         string requestUrl = DownloadManager.BmclApi.TryFindUrl(Entry.Url);
-        var json = await requestUrl.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
+        await using var jsonStream = await requestUrl.GetStreamAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
 
         var jsonPath = new FileInfo(Path.Combine(MinecraftFolder, "versions", Entry.Id, $"{Entry.Id}.json"));
         if (!jsonPath.Directory.Exists) {
             jsonPath.Directory.Create();
         }
 
-        await File.WriteAllTextAsync(jsonPath.FullName, json, cancellationToken);
+        await using var output = File.OpenWrite(jsonPath.FullName);
+        await jsonStream.CopyToAsync(output, cancellationToken);
         ReportProgress(InstallStep.DownloadVersionJson, 0.3d, TaskStatus.Running, 1, 1);
 
         return jsonPath;
@@ -83,13 +84,14 @@ public sealed class VanillaInstaller : InstallerBase {
         var jsonFile = new FileInfo(entry.AssetIndexJsonPath);
 
         string requestUrl = DownloadManager.BmclApi.TryFindUrl(assetIndex.Url);
-        var json = await requestUrl.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
+        var json = await requestUrl.GetStreamAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
 
         if (!jsonFile.Directory.Exists) {
             jsonFile.Directory.Create();
         }
 
-        await File.WriteAllTextAsync(jsonFile.FullName, json, cancellationToken);
+        await using var output = File.OpenWrite(jsonFile.FullName);
+        await json.CopyToAsync(output, cancellationToken);
         ReportProgress(InstallStep.DownloadAssetIndexFile, 0.5d, TaskStatus.Running, 1, 1);
 
         return jsonFile;

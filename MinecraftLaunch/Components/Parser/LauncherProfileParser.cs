@@ -34,9 +34,8 @@ public sealed class DefaultLauncherProfileParser : IDataProcessor {
         _filePath = Path.Combine(mcList[0].MinecraftFolderPath, "launcher_profiles.json");
 
         if (File.Exists(_filePath)) {
-            var launcherProfileJson = File.ReadAllText(_filePath, Encoding.UTF8);
-            _launcherProfile = launcherProfileJson.Deserialize(new LauncherProfileEntryContext(JsonSerializerUtil
-                .GetDefaultOptions()).LauncherProfileEntry) ?? new LauncherProfileEntry();
+            using var stream = File.OpenRead(_filePath);
+            _launcherProfile = JsonSerializer.Deserialize(stream,LauncherProfileEntryContext.Default.LauncherProfileEntry) ?? new LauncherProfileEntry();
         } else {
             _launcherProfile = new LauncherProfileEntry {
                 Profiles = [],
@@ -62,12 +61,9 @@ public sealed class DefaultLauncherProfileParser : IDataProcessor {
         Datas = _launcherProfile.Profiles.ToDictionary(x => x.Key, x1 => x1.Value as object);
     }
 
-    public Task SaveAsync(CancellationToken cancellationToken = default) {
+    public async Task SaveAsync(CancellationToken cancellationToken = default) {
         _launcherProfile.Profiles = Datas.ToDictionary(x => x.Key, x1 => x1.Value as GameProfileEntry);
-        var json = _launcherProfile.Serialize(
-            new LauncherProfileEntryContext(JsonSerializerUtil.GetDefaultOptions()).LauncherProfileEntry
-        );
-
-        return File.WriteAllTextAsync(_filePath, json, cancellationToken);
+        await using var output = File.OpenWrite(_filePath);
+        await JsonSerializer.SerializeAsync(output, _launcherProfile,LauncherProfileEntryContext.Default.LauncherProfileEntry, cancellationToken);
     }
 }
