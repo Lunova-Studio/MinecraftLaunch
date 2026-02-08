@@ -78,12 +78,13 @@ public sealed class FabricInstaller : InstallerBase {
         string requestUrl = $"https://meta.fabricmc.net/v2/versions/loader/{Entry.McVersion}/{Entry.BuildVersion}/profile/json";
         requestUrl = DownloadManager.BmclApi.TryFindUrl(requestUrl);
 
-        var json = await HttpUtil.FlurlClient.Request(requestUrl)
-            .GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
-
-        string instanceId = CustomId ??
-            json.AsNode().GetString("id") ??
-            $"fabric-loader-{Entry.Loader.Version}_{entry.Id}";
+        await using var jsonStream = await HttpUtil.FlurlClient.Request(requestUrl)
+            .GetStreamAsync(HttpCompletionOption.ResponseContentRead, cancellationToken).ConfigureAwait(false);
+        using var doc = await JsonDocument.ParseAsync(jsonStream,cancellationToken:cancellationToken).ConfigureAwait(false);
+        
+        string instanceId = CustomId ?? 
+                            doc.RootElement.GetPropertyNullable("id"u8)?.GetString() ??
+                            $"fabric-loader-{Entry.Loader.Version}_{entry.Id}";
 
         var jsonFile = new FileInfo(Path
             .Combine(MinecraftFolder, "versions", instanceId, $"{instanceId}.json"));
@@ -91,8 +92,10 @@ public sealed class FabricInstaller : InstallerBase {
         if (!jsonFile.Directory!.Exists)
             jsonFile.Directory.Create();
 
-        await File.WriteAllTextAsync(jsonFile.FullName, json, cancellationToken);
-
+        await using var output = File.OpenWrite(jsonFile.FullName);
+        await JsonSerializer.SerializeAsync(output, doc, JsonDocumentSerializeContext.Default.JsonDocument,
+            cancellationToken);
+        
         ReportProgress(InstallStep.DownloadVersionJson, 0.45d, TaskStatus.Running, 1, 1);
         return jsonFile;
     }
@@ -115,7 +118,7 @@ public sealed class FabricInstaller : InstallerBase {
 
     private static ModifiedMinecraftEntry ParseModifiedMinecraft(FileInfo file, CancellationToken cancellationToken) {
         cancellationToken.ThrowIfCancellationRequested();
-        var entry = MinecraftParser.Parse(file.Directory, null, out var _) as ModifiedMinecraftEntry;
+        var entry = MinecraftParser.Parse(file.Directory, null, out  _) as ModifiedMinecraftEntry;
 
         return entry ?? throw new InvalidOperationException("An incorrect modified entry was encountered");
     }

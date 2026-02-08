@@ -55,6 +55,22 @@ public static partial class JsonNodeExtension {
         return JsonNode.Parse(json);
     }
 
+    public static JsonElement? GetPropertyNullable(this JsonElement element, ReadOnlySpan<char> propertyName)
+    {
+        if (element.TryGetProperty(propertyName, out var value))
+        {
+            return value;
+        }
+        return null;
+    }
+    public static JsonElement? GetPropertyNullable(this JsonElement element, ReadOnlySpan<byte> propertyNameUtf8)
+    {
+        if (element.TryGetProperty(propertyNameUtf8, out var value))
+        {
+            return value;
+        }
+        return null;
+    }
     public static JsonArray AsArray(this IEnumerable<JsonNode> jsonNodes) {
         return [.. jsonNodes];
     }

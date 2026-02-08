@@ -57,3 +57,7 @@ public record struct OptifineMinecraftLibrary {
 [JsonSerializable(typeof(MinecraftJsonEntry))]
 [JsonSerializable(typeof(OptifineMinecraftEntry))]
 public sealed partial class MinecraftJsonEntryContext : JsonSerializerContext;
+
+[JsonSerializable(typeof(JsonDocument))]
+[JsonSerializable(typeof(JsonElement))]
+public sealed partial class JsonDocumentSerializeContext: JsonSerializerContext;

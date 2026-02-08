@@ -78,9 +78,10 @@ public sealed class QuiltInstaller : InstallerBase {
         string requestUrl = $"https://meta.quiltmc.org/v3/versions/loader/{Entry.McVersion}/{Entry.BuildVersion}/profile/json";
         requestUrl = DownloadManager.BmclApi.TryFindUrl(requestUrl);
 
-        var json = await requestUrl.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
+        await using var jsonStream = await requestUrl.GetStreamAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
+        using var doc = await JsonDocument.ParseAsync(jsonStream, cancellationToken: cancellationToken);
         string entryId = CustomId ??
-            json.AsNode().GetString("id") ??
+            doc.RootElement.GetPropertyNullable("id"u8)?.GetString() ??
             $"quilt-loader-{Entry.Loader.Version}_{entry.Id}";
 
         var jsonFile = new FileInfo(Path
@@ -89,7 +90,9 @@ public sealed class QuiltInstaller : InstallerBase {
         if (!jsonFile.Directory!.Exists)
             jsonFile.Directory.Create();
 
-        await File.WriteAllTextAsync(jsonFile.FullName, json, cancellationToken);
+        await using var output = File.OpenWrite(jsonFile.FullName);
+        await JsonSerializer.SerializeAsync(output, doc, JsonDocumentSerializeContext.Default.JsonDocument,
+            cancellationToken);
 
         ReportProgress(InstallStep.DownloadVersionJson, 0.45d, TaskStatus.Running, 1, 1);
         return jsonFile;

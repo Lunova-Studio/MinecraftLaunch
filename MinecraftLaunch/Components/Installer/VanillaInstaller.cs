@@ -23,11 +23,10 @@ public sealed class VanillaInstaller : InstallerBase {
     public static async Task<IEnumerable<VersionManifestEntry>> EnumerableMinecraftAsync(CancellationToken cancellationToken = default) {
         var url = DownloadManager.BmclApi
             .TryFindUrl("https://launchermeta.mojang.com/mc/game/version_manifest.json");
+        await using var stream = await url.GetStreamAsync(HttpCompletionOption.ResponseContentRead, cancellationToken);
+        using var node = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
 
-        var node = (await url.GetStringAsync(HttpCompletionOption.ResponseContentRead, cancellationToken))
-            .AsNode();
-
-        var entries = node.GetEnumerable("versions").Deserialize(VersionManifestEntryContext.Default.IEnumerableVersionManifestEntry);
+        var entries = node.RootElement.GetProperty("versions").Deserialize(VersionManifestEntryContext.Default.IEnumerableVersionManifestEntry);
         return entries;
     }
 
