@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Buffers;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
@@ -165,6 +166,31 @@ public static partial class JsonNodeExtension {
             }).Where(v => v is not null)!;
     }
 
+    internal static TResult[] EnumerateArrayThenSelectToArray<TResult>(in this JsonElement arrayElement,
+        Func<JsonElement, TResult> selector)
+    {
+        var offset = 0;
+        var buffer = new TResult[arrayElement.GetArrayLength()];
+        foreach (var item in arrayElement.EnumerateArray())
+        {
+            buffer[offset++] = selector(item);
+        }
+        return buffer;
+    }
+    internal static string[] EnumerateArrayThenSelectNotNullStringPropertyWithNotNullAndNotEmptyValueThenToArray(this JsonElement arrayElement, ReadOnlySpan<byte> elementName)
+    {
+        var offset = 0;
+        var buffer = ArrayPool<string>.Shared.Rent(arrayElement.GetArrayLength());
+        foreach (var item in arrayElement.EnumerateArray())
+        {
+            if(!item.TryGetProperty(elementName, out var innerProperty))continue;
+            buffer[offset++] = innerProperty.GetString();
+        }
+        // 这可能会多次拷贝开销
+        var result = buffer[..offset];
+        ArrayPool<string>.Shared.Return(buffer);
+        return result;
+    }
     [GeneratedRegex(@"^""[^""]*""\s*:")]
     private static partial Regex JsonFieldRegex();
 
