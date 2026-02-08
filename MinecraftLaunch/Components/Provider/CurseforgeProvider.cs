@@ -174,37 +174,41 @@ public sealed class CurseforgeProvider {
 
     #region Private and internals
 
-    internal static async Task<JsonNode> GetModFileEntryAsync(long modId, long fileId, CancellationToken cancellationToken = default) {
+    internal static async Task<JsonElement> GetModFileEntryAsync(long modId, long fileId,
+        CancellationToken cancellationToken = default)
+    {
         CheckApiKey();
 
-        string json = string.Empty;
-        try {
+        try
+        {
             using var responseMessage = await CreateRequest("mods", "files", $"{fileId}")
-                .GetAsync(cancellationToken: cancellationToken); ;
+                .GetAsync(cancellationToken: cancellationToken);
+            await using var json = await responseMessage.GetStreamAsync();
+            using var doc = await JsonDocument.ParseAsync(json, cancellationToken: cancellationToken);
+            return doc.RootElement.GetProperty("data").Clone();
 
-            json = await responseMessage.GetStringAsync();
-        } catch (Exception) { }
-
-        return json?.AsNode()?.Select("data") ??
-            throw new InvalidModpackFileException();
+        }
+        catch (Exception e)
+        {
+            throw new InvalidModpackFileException("The modpack file could not be read.", e);
+        }
+               
     }
 
-    internal static async Task<string> GetModDownloadUrlAsync(long modId, long fileId, CancellationToken cancellationToken = default) {
+    internal static async Task<string> GetModDownloadUrlAsync(long modId, long fileId,
+        CancellationToken cancellationToken = default)
+    {
         CheckApiKey();
 
-        string json = string.Empty;
-        try {
-            using var responseMessage = await CreateRequest("mods", $"{modId}", "files", $"{fileId}", "download-url")
-                .GetAsync(cancellationToken: cancellationToken);
 
-            json = await responseMessage.GetStringAsync();
-        } catch (FlurlHttpException ex) {
-            if (ex.StatusCode is 403)
-                return string.Empty;
-        }
+        using var responseMessage = await CreateRequest("mods", $"{modId}", "files", $"{fileId}", "download-url")
+            .GetAsync(cancellationToken: cancellationToken);
+        await using var stream = await responseMessage.GetStreamAsync();
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        // get data
+        if (!doc.RootElement.TryGetProperty("data", out var dataElement)) return string.Empty;
+        return dataElement.GetString() ?? throw new InvalidModpackFileException();
 
-        return json?.AsNode()?.GetString("data")
-            ?? throw new InvalidModpackFileException();
     }
 
     internal static async Task<string> TestDownloadUrlAsync(long fileId, string fileName, CancellationToken cancellationToken = default) {

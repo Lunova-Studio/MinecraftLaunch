@@ -147,16 +147,16 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
         return downloadInfoGroup;
     }
 
-    private async IAsyncEnumerable<string> RedirectInvalidModsAsync(IEnumerable<CurseforgeModpackFileEntry> modpacks, [EnumeratorCancellation] CancellationToken cancellationToken) {
-        ReportProgress(InstallStep.RedirectInvalidMod, 0.5d, TaskStatus.Running, modpacks.Count(), 0);
+    private async IAsyncEnumerable<string> RedirectInvalidModsAsync(List<CurseforgeModpackFileEntry> modpacks, [EnumeratorCancellation] CancellationToken cancellationToken) {
+        ReportProgress(InstallStep.RedirectInvalidMod, 0.5d, TaskStatus.Running, modpacks.Count, 0);
 
         int count = 0;
-        int totalCount = modpacks.Count();
+        int totalCount = modpacks.Count;
         foreach (var modpackFile in modpacks) {
             var modFileName = (await CurseforgeProvider
                 .GetModFileEntryAsync(modpackFile.ProjectId, modpackFile.FileId, cancellationToken))
-                .GetString("fileName");
-
+                .GetProperty("fileName"u8).GetString();
+            
             lock (modpacks) {
                 var progress = (double)count / (double)totalCount;
 
