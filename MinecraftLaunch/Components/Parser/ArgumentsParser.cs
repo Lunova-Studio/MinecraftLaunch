@@ -3,13 +3,8 @@ using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Utilities;
 using MinecraftLaunch.Extensions;
-using MinecraftLaunch.Utilities;
-using System.Collections.Immutable;
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace MinecraftLaunch.Components.Parser;
 
@@ -282,17 +277,16 @@ internal sealed class GameArgumentParser
             }
         }
 
-        if (gameJsonEntry.Arguments?.GetEnumerable("game") is null)
-        {
+        if (!gameJsonEntry.Arguments.TryGetProperty("game"u8,out var gameElement))
             yield break;
-        }
+        
 
-        var game = gameJsonEntry.Arguments.GetEnumerable("game")
-            .Where(x => x.GetValueKind() is JsonValueKind.String)
+        var game = gameElement.EnumerateArray()
+            .Where(x => x.ValueKind is JsonValueKind.String)
             .Select(x => x.GetString().ToPath())
             .GroupArguments();
 
-        foreach (var item in game.ToImmutableArray())
+        foreach (var item in game)
             yield return item;
     }
 }
@@ -304,9 +298,7 @@ internal sealed class JvmArgumentParser
 {
     public static IEnumerable<string> Parse(MinecraftJsonEntry gameJsonEntry)
     {
-        var jvm = new List<string>();
-
-        if (gameJsonEntry.Arguments.GetEnumerable("jvm") is null)
+        if (!gameJsonEntry.Arguments.TryGetProperty("jvm"u8,out var jvmElement))
         {
             yield return "-Djava.library.path=${natives_directory}";
             yield return "-Dminecraft.launcher.brand=${launcher_name}";
@@ -314,12 +306,12 @@ internal sealed class JvmArgumentParser
             yield return "-cp ${classpath}";
             yield break;
         }
-
-        foreach (var arg in gameJsonEntry.Arguments.GetEnumerable("jvm"))
+        var jvm = new List<string>();
+        foreach (var arg in jvmElement.EnumerateArray())
         {
-            if (arg.GetValueKind() is JsonValueKind.String)
+            if (arg.ValueKind is JsonValueKind.String)
             {
-                var argValue = arg.GetString().Trim();
+                var argValue = arg.GetString()!.Trim();
 
                 if (argValue.Contains(' '))
                     jvm.AddRange(argValue.Split(' '));

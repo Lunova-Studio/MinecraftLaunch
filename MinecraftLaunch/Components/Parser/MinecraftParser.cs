@@ -88,11 +88,9 @@ public sealed class MinecraftParser {
         string clientJsonPath = clientJsonFile.FullName;
 
         // Parse client.json
-        string clientJson = File.ReadAllText(clientJsonPath);
-        var clientJsonNode = JsonNode.Parse(clientJson)
-            ?? throw new JsonException($"Failed to parse {clientJsonPath}");
-
-        var clientJsonObject = clientJson.Deserialize(new MinecraftJsonEntryContext(JsonSerializerUtil.GetDefaultOptions()).MinecraftJsonEntry)
+        using var stream = clientJsonFile.OpenRead();
+        using var doc = JsonDocument.Parse(stream);
+        var clientJsonObject = doc.Deserialize(MinecraftJsonEntryContext.Default.MinecraftJsonEntry)
             ?? throw new JsonException($"Failed to deserialize {clientJsonPath} into {typeof(MinecraftJsonEntry)}");
 
         // <version> folder name
@@ -106,8 +104,8 @@ public sealed class MinecraftParser {
 
         // Create MinecraftInstance
         return IsVanilla(clientJsonObject)
-            ? ParseVanilla(partialData, clientJsonObject, clientJsonNode)
-            : ParseModified(partialData, clientJsonObject, clientJsonNode, parsedInstances, out foundInheritedInstanceInParsed);
+            ? ParseVanilla(partialData, clientJsonObject, doc.RootElement)
+            : ParseModified(partialData, clientJsonObject, doc.RootElement, parsedInstances, out foundInheritedInstanceInParsed);
     }
 
     private static bool IsVanilla(MinecraftJsonEntry clientJsonObject) {
@@ -124,38 +122,41 @@ public sealed class MinecraftParser {
             clientJsonObject.MinecraftArguments?.Contains("--tweakClass") == true
             && clientJsonObject.MinecraftArguments?.Contains("net.minecraft.launchwrapper.AlphaVanillaTweaker") == false
             // Since 1.13
-            || clientJsonObject.Arguments?.GetEnumerable("game")?
-                .Where(e => e.GetValueKind() is JsonValueKind.String && e.GetString().Equals("--tweakClass"))
-                .Any() == true;
-
+            || CheckIfOver113(clientJsonObject.Arguments);
+        
         if (!string.IsNullOrEmpty(clientJsonObject.InheritsFrom)
             || !hasVanillaMainClass
             || hasVanillaMainClass && hasTweakClass)
             return false;
 
         return true;
-    }
 
-    private static string ReadVersionIdFromNonInheritingClientJson(MinecraftJsonEntry gameJsonEntry, JsonNode clientJsonNode) {
-        string versionId = gameJsonEntry.Id;
-
-        try {
-            if (clientJsonNode["patches"] is JsonNode hmclPatchesNode) {
-                versionId = hmclPatchesNode[0]?["version"]?.GetValue<string>();
-            } else if (clientJsonNode["clientVersion"] is JsonNode pclClientVersionNode) {
-                versionId = pclClientVersionNode.GetValue<string>();
+        static bool CheckIfOver113(JsonElement argumentElement)
+        {
+            if (!argumentElement.TryGetProperty("game"u8, out var gameElement)) return false;
+            foreach (var item in gameElement.EnumerateArray())
+            {
+                if (item.ValueKind is JsonValueKind.String &&
+                    string.Equals(item.GetString()!, "--tweakClass", StringComparison.Ordinal)) return true;
             }
-
-            if (versionId is null)
-                throw new FormatException();
-        } catch (Exception e) when (e is InvalidOperationException || e is FormatException) {
-            throw new FormatException("Failed to parse version id");
+            return false;
         }
-
-        return versionId;
     }
 
-    private static VanillaMinecraftEntry ParseVanilla(PartialData partialData, MinecraftJsonEntry gameJsonEntry, JsonNode clientJsonNode) {
+    private static string ReadVersionIdFromNonInheritingClientJson(MinecraftJsonEntry gameJsonEntry,
+        JsonElement clientJsonNode)
+    {
+        var versionId = gameJsonEntry.Id;
+        
+        if (clientJsonNode.TryGetProperty("patches"u8, out var hmclPatchesNode))
+            versionId = hmclPatchesNode[0].GetProperty("version"u8).GetString();
+        else if (clientJsonNode.TryGetProperty("clientVersion"u8, out var pclClientVersionNode)) 
+            versionId = pclClientVersionNode.GetString();
+
+        return versionId ?? throw new FormatException("Failed to parse version id");
+    }
+
+    private static VanillaMinecraftEntry ParseVanilla(PartialData partialData, MinecraftJsonEntry gameJsonEntry, JsonElement clientJsonNode) {
         // Check if client.jar exists
         string clientJarPath = partialData.ClientJsonPath[..^"json".Length] + "jar";
 
@@ -179,7 +180,7 @@ public sealed class MinecraftParser {
         };
     }
 
-    private static ModifiedMinecraftEntry ParseModified(PartialData partialData, MinecraftJsonEntry minecraftJsonEntry, JsonNode clientJsonNode,
+    private static ModifiedMinecraftEntry ParseModified(PartialData partialData, MinecraftJsonEntry minecraftJsonEntry, JsonElement clientJsonNode,
         IEnumerable<MinecraftEntry> minecraftEntries,
         out bool foundInheritedInstanceInParsed) {
         foundInheritedInstanceInParsed = false;
@@ -191,9 +192,7 @@ public sealed class MinecraftParser {
             string inheritedInstanceId = minecraftJsonEntry.InheritsFrom
                 ?? throw new InvalidOperationException("InheritsFrom is not defined in client.json");
 
-            inheritedEntry = minecraftEntries?
-                .Where(i => i is VanillaMinecraftEntry v && v.Version.VersionId == inheritedInstanceId)
-                .FirstOrDefault() as VanillaMinecraftEntry;
+            inheritedEntry = minecraftEntries.FirstOrDefault(i => i is VanillaMinecraftEntry v && v.Version.VersionId == inheritedInstanceId) as  VanillaMinecraftEntry;
 
             if (inheritedEntry is not null) {
                 foundInheritedInstanceInParsed = true;
@@ -201,7 +200,7 @@ public sealed class MinecraftParser {
                 string inheritedInstancePath = Path.Combine(partialData.MinecraftFolderPath, "versions", inheritedInstanceId);
                 var inheritedInstanceDir = new DirectoryInfo(inheritedInstancePath);
 
-                inheritedEntry = Parse(inheritedInstanceDir, null, out var _) as VanillaMinecraftEntry
+                inheritedEntry = Parse(inheritedInstanceDir, null, out  _) as VanillaMinecraftEntry
                     ?? throw new InvalidOperationException($"Failed to parse inherited instance {inheritedInstanceId}");
             }
         }
@@ -231,23 +230,24 @@ public sealed class MinecraftParser {
 
         // Parse mod loaders
         List<ModLoaderInfo> modLoaders = [];
-        var libraries = minecraftJsonEntry.Libraries ?? [];
-        foreach (var lib in libraries) {
-            string libNameLowered = lib.GetString("name")?.ToLower();
-            if (libNameLowered is null)
+        var librariesElement = minecraftJsonEntry.Libraries;
+        foreach (var lib in librariesElement.EnumerateArray()) {
+            if(!lib.TryGetProperty("name"u8, out var libNameElement))continue;
+            var libName = libNameElement.GetString();
+            if (libName is null)
                 continue;
 
             foreach (var key in _modLoaderLibs.Keys) {
-                if (!libNameLowered.Contains(key))
+                if (!libName.Contains(key,StringComparison.OrdinalIgnoreCase))
                     continue;
-
+                
                 // Mod loader library detected
-                var id = libNameLowered.Split(':')[2];
+                var id = libName.Split(':')[2];
                 var loader = new ModLoaderInfo {
                     Type = _modLoaderLibs[key].Item1,
                     Version = _modLoaderLibs[key].Item2(id)
                 };
-
+                
                 if (!modLoaders.Contains(loader))
                     modLoaders.Add(loader);
 

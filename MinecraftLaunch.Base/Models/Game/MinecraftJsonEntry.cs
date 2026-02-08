@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MinecraftLaunch.Base.Interfaces;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -20,10 +21,11 @@ public record MinecraftJsonEntry {
     [JsonPropertyName("type")] public string Type { get; set; }
     [JsonPropertyName("assets")] public string Assets { get; set; }
     [JsonPropertyName("mainClass")] public string MainClass { get; set; }
-    [JsonPropertyName("arguments")] public JsonNode Arguments { get; set; }
-    [JsonPropertyName("libraries")] public JsonArray Libraries { get; set; }
+    [JsonPropertyName("arguments")] public JsonElement Arguments { get; set; }
+    /// <summary> ValueType is Array </summary>
+    [JsonPropertyName("libraries")] public JsonElement Libraries { get; set; }
     [JsonPropertyName("inheritsFrom")] public string InheritsFrom { get; set; }
-    [JsonPropertyName("javaVersion")] public JsonNode JavaVersion { get; set; }
+    [JsonPropertyName("javaVersion")] public JsonElement JavaVersion { get; set; }
     [JsonPropertyName("releaseTime")] public DateTime ReleaseTime { get; set; }
     [JsonPropertyName("assetIndex")] public AssstIndexJsonEntry AssetIndex { get; set; }
     [JsonPropertyName("minecraftArguments")] public string MinecraftArguments { get; set; }
