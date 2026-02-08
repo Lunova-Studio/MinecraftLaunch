@@ -5,10 +5,7 @@ using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
 using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Web;
 
 namespace MinecraftLaunch.Components.Authenticator;
 
@@ -115,7 +112,7 @@ public sealed class MicrosoftAuthenticator {
                 };
             }
 
-            if (tempTokenResponse.GetProperty("token_type"u8).GetString() is "Bearer")
+            if (tempTokenResponse.GetPropertyNullable("token_type"u8)?.GetString() is "Bearer")
                 return tokenResponse;
 
             await Task.Delay(TimeSpan.FromSeconds(codeResponse.Interval), cancellationToken);

@@ -127,15 +127,13 @@ public sealed class JavaInstaller {
             Directory.CreateDirectory(extractPath);
         await using var stream = File.OpenRead(manifestFile.FullName);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: token);
-        var filesEnumerator = doc.RootElement.GetProperty("files"u8).EnumerateObject();
+        var filesEnumeratorElement = doc.RootElement.GetProperty("files"u8);
 
         int totalFiles = 0;
         // count total,filesEnumerator咋没暴露计数API(
-        while (!filesEnumerator.MoveNext()) ++totalFiles;
-        filesEnumerator.Dispose();
-        // reset,the iter is supported 
-        filesEnumerator.Reset();
-        
+        foreach (var i in filesEnumeratorElement.EnumerateObject()) totalFiles++;
+
+        var filesEnumerator = filesEnumeratorElement.EnumerateObject();
         
         int completedFiles = 0;
     

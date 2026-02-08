@@ -119,7 +119,6 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
         List<Task> requestTasks = [];
         List<(string, CurseforgeModpackFileEntry)> downloadInfoGroup = [];
         SemaphoreSlim semaphoreSlim = new(256, 256);
-
         ReportProgress(InstallStep.ParseDownloadUrls, 0.1d, TaskStatus.Running, totalCount, count);
 
         foreach (var modpackFile in Entry.ModFiles) {

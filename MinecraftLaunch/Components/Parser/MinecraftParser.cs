@@ -1,11 +1,9 @@
 using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
-using MinecraftLaunch.Extensions;
-using MinecraftLaunch.Utilities;
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace MinecraftLaunch.Components.Parser;
 
@@ -146,10 +144,13 @@ public sealed class MinecraftParser {
     private static string ReadVersionIdFromNonInheritingClientJson(MinecraftJsonEntry gameJsonEntry,
         JsonElement clientJsonNode)
     {
+        Debug.Assert(clientJsonNode.ValueKind == JsonValueKind.Object);
         var versionId = gameJsonEntry.Id;
-        
         if (clientJsonNode.TryGetProperty("patches"u8, out var hmclPatchesNode))
+        {
+            if(hmclPatchesNode.GetArrayLength() < 0)throw new FormatException("Failed to parse version id");
             versionId = hmclPatchesNode[0].GetProperty("version"u8).GetString();
+        }
         else if (clientJsonNode.TryGetProperty("clientVersion"u8, out var pclClientVersionNode)) 
             versionId = pclClientVersionNode.GetString();
 
