@@ -19,4 +19,11 @@ public static class ZipArchiveExtension {
 
         zipArchiveEntry.ExtractToFile(destinationFile, true);
     }
+
+    public static async Task ExtractToFileAsync(this ZipArchiveEntry zipArchiveEntry, string destinationFile)
+    {
+        await using var dst = File.OpenWrite(destinationFile);
+        await using var src = zipArchiveEntry.Open();
+        await src.CopyToAsync(dst);
+    }
 }
