@@ -14,8 +14,8 @@ internal static class ModPackUtils
         string srcZipPath,
         string overridesPrefix,
         string independentAndFullWorkingPath,
-        Action<ZipArchive> whenEachEntryCompleted = null,
-        CancellationToken cancelToken = default)
+        /*执行线程不保证*/Action<ZipArchive> whenEachEntryCompleted = null,
+        CancellationToken cancellationToken = default)
     {
         // 从-1开始即第一次递增后为0
         const int startOffset = -1;
@@ -32,7 +32,7 @@ internal static class ModPackUtils
             if (i is 0) targetOffset = zips[0].Entries.Count;
             // 拷贝tid用于不同实例闭包
             var taskThreadId = i;
-            taskThreads[i] = Task.Run(ExtractManyJob, cancelToken);
+            taskThreads[i] = Task.Run(ExtractManyJob, cancellationToken);
             continue;
 
             // main job
@@ -40,7 +40,7 @@ internal static class ModPackUtils
             {
                 while (true)
                 {
-                    cancelToken.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
                     var entryIndex = Interlocked.Increment(ref concurrentOffset);
                     // entries已全部复制
                     // targetOffset不会被修改
@@ -52,7 +52,7 @@ internal static class ModPackUtils
                     var dstPath = Path.Combine(independentAndFullWorkingPath,
                         RemoveOverridesPrefix(entry.FullName, overridesPrefix));
                     // 复制
-                    await entry.ExtractToFileAsync(dstPath);
+                    await entry.ExtractToFileAsync(dstPath,true,cancellationToken).ConfigureAwait(false);
                     whenEachEntryCompleted?.Invoke(zips[taskThreadId]);
                 }
             }
@@ -73,19 +73,20 @@ internal static class ModPackUtils
         string srcZipPath,
         string overridesPrefix,
         string independentAndFullWorkingPath,
-        Action<ZipArchive> whenEachEntryCompleted = null,
-        CancellationToken cancelToken = default)
+        /*执行线程不保证*/Action<ZipArchive> whenEachEntryCompleted = null,
+        CancellationToken cancellationToken = default)
     {
         using var zip = ZipFile.OpenRead(srcZipPath);
         foreach (var item in zip.Entries)
         {
-            cancelToken.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
             if (!IsShouldExtract(item, overridesPrefix)) continue;
             await item.ExtractToFileAsync(
                 Path.Combine(
                     independentAndFullWorkingPath,
-                    RemoveOverridesPrefix(item.FullName, overridesPrefix))
-            );
+                    RemoveOverridesPrefix(item.FullName, overridesPrefix)),
+                overwrite:true,cancellationToken
+            ).ConfigureAwait(false);
             whenEachEntryCompleted?.Invoke(zip);
         }
     }
