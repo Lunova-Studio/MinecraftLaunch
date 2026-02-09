@@ -21,11 +21,19 @@ internal static class ModPackUtils
         foreach (var item in zip.Entries)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // 排除非 <overrides>/文件
+            if (!item.FullName.StartsWith(overridesPrefix, StringComparison.OrdinalIgnoreCase)) continue;
+            var targetPath = Path.Combine(
+                independentAndFullWorkingPath,
+                RemoveOverridesPrefix(item.FullName, overridesPrefix));
+            if (item.FullName.EndsWith(ZipPathSeparator))
+            {
+                Directory.CreateDirectory(targetPath);
+                continue;
+            }
             if (!IsShouldExtract(item, overridesPrefix)) continue;
             await item.ExtractToFileAsync(
-                Path.Combine(
-                    independentAndFullWorkingPath,
-                    RemoveOverridesPrefix(item.FullName, overridesPrefix)),
+                targetPath,
                 overwrite:true,cancellationToken
             ).ConfigureAwait(false);
             whenEachEntryCompleted?.Invoke(zip);
