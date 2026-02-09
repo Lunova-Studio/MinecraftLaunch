@@ -14,6 +14,7 @@ internal static class ModPackUtils
         string srcZipPath,
         string overridesPrefix,
         string independentAndFullWorkingPath,
+        Action<ZipArchive> whenEachEntryCompleted = null,
         CancellationToken cancelToken = default)
     {
         // 从-1开始即第一次递增后为0
@@ -52,6 +53,7 @@ internal static class ModPackUtils
                         RemoveOverridesPrefix(entry.FullName, overridesPrefix));
                     // 复制
                     await entry.ExtractToFileAsync(dstPath);
+                    whenEachEntryCompleted?.Invoke(zips[taskThreadId]);
                 }
             }
         }
@@ -71,6 +73,7 @@ internal static class ModPackUtils
         string srcZipPath,
         string overridesPrefix,
         string independentAndFullWorkingPath,
+        Action<ZipArchive> whenEachEntryCompleted = null,
         CancellationToken cancelToken = default)
     {
         using var zip = ZipFile.OpenRead(srcZipPath);
@@ -83,6 +86,7 @@ internal static class ModPackUtils
                     independentAndFullWorkingPath,
                     RemoveOverridesPrefix(item.FullName, overridesPrefix))
             );
+            whenEachEntryCompleted?.Invoke(zip);
         }
     }
 
