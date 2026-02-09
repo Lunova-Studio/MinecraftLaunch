@@ -70,30 +70,37 @@ public sealed class ModrinthModpackInstaller : InstallerBase {
 
     #region Privates
 
-    private IEnumerable<DownloadRequest> ParseModFiles(CancellationToken cancellationToken) {
-        int totalCount = Entry.Files.Count();
-        ReportProgress(InstallStep.ParseDownloadUrls, 0.1d, TaskStatus.Running, totalCount, 0);
-
-        int count = 0;
-        string versionPath = Minecraft.ToWorkingPath(true);
-        foreach (var file in Entry.Files.AsParallel()) {
+    private IEnumerable<DownloadRequest> ParseModFiles(CancellationToken cancellationToken)
+    {
+        const double minProgress = 0.1d;
+        const double maxProgress = 0.45d;
+        var fileArray = Entry.Files.ToArray();
+        var constTotalCount = fileArray.Length;
+        ReportProgress(
+            step: InstallStep.ParseDownloadUrls,
+            progress: 0.1d,
+            status: TaskStatus.Running,
+            totalCount: constTotalCount, 
+            finshedCount: 0);
+        double count = 0;
+        var versionPath = Minecraft.ToWorkingPath(true);
+        //不对Parallel进行Foreach,直接不Parallel
+        return fileArray.Select(fileItem =>
+        {
             cancellationToken.ThrowIfCancellationRequested();
-
-            lock (Entry) {
-                double progress = (double)Interlocked.Increment(ref count) / (double)totalCount;
-                ReportProgress(InstallStep.ParseDownloadUrls, progress.ToPercentage(0.1d, 0.45d),
-                    TaskStatus.Running, totalCount, count);
-            }
-
-            if (!file.Downloads.Any())
-                continue;
-
-            if (string.IsNullOrEmpty(file.Path))
-                continue;
-
-            var filePath = Path.Combine(versionPath, file.Path);
-            yield return new DownloadRequest(file.Downloads.First(), filePath);
-        }
+            // 非多线程且同个闭包可见性好,无需原子操作
+            ReportProgress(
+                step: InstallStep.ParseDownloadUrls,
+                // ReSharper disable once AccessToModifiedClosure
+                progress: (++count / constTotalCount).ToPercentage(minProgress, maxProgress),
+                status: TaskStatus.Running,
+                totalCount: constTotalCount,
+                finshedCount: 0);
+            if (!fileItem.Downloads.Any()) return null;
+            if (string.IsNullOrEmpty(fileItem.Path)) return null;
+            var filePath = Path.Combine(versionPath, fileItem.Path);
+            return new DownloadRequest(fileItem.Downloads.First(), filePath);
+        }).Where(static x => x is not null);
     }
 
     private Task<GroupDownloadResult> DownloadModsAsync(IEnumerable<DownloadRequest> downloadRequests, CancellationToken cancellationToken) {
