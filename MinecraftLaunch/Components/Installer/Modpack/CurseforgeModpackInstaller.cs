@@ -193,36 +193,25 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
     }
 
     private async Task ExtractModpackAsync(CancellationToken cancellationToken) {
-        var zipArchive = ZipFile.OpenRead(ModpackPath);
-        var entries = zipArchive?.Entries;
-        ReportProgress(InstallStep.ExtractModpack, 0.85d, TaskStatus.Running, entries.Count, 0);
+      
+        ReportProgress(InstallStep.ExtractModpack, 0.85d, TaskStatus.Running, 0, 0); // 此处未开始解析,返回0
 
-        int count = 0;
-        var tasks = entries.Select(x => Task.Run(() => {
-            lock (zipArchive) {
-                ReportProgress(InstallStep.ExtractModpack,
-                    ((double)Interlocked.Increment(ref count) / (double)entries.Count).ToPercentage(0.85d, 1.0d),
-                    TaskStatus.Running, entries.Count, count);
-
-                if (!Entry.IsOverride ||
-                    !x.FullName.StartsWith(Entry.Overrides, StringComparison.OrdinalIgnoreCase)) return;
-
-                var subPath = x.FullName[(Entry.Overrides.Length + 1)..];
-                if (string.IsNullOrEmpty(subPath))
-                    return;
-
-                var filePath = new FileInfo(Path.Combine(Path.GetFullPath(Minecraft.ToWorkingPath(true)), subPath));
-                if (x.FullName.EndsWith('/')) {
-                    Directory.CreateDirectory(filePath.FullName);
-                    return;
-                }
-
-                x.ExtractTo(filePath.FullName);
-            }
-        }, cancellationToken));
-
-        await Task.WhenAll(tasks);
-        zipArchive.Dispose();
+        var count = 0; 
+        await ModPackUtils.ExtractSingleThreadAsync(
+            srcZipPath: ModpackPath,
+            overridesPrefix: Entry.Overrides,
+            independentAndFullWorkingPath: Minecraft.ToWorkingPath(true),
+            whenEachEntryCompleted: ReportEntryExtractingProgress,
+            cancellationToken: cancellationToken);
+        return;
+        
+        void ReportEntryExtractingProgress(ZipArchive zipArchive) =>
+            ReportProgress(
+                step: InstallStep.ExtractModpack, 
+                progress: (Interlocked.Increment(ref count) / (double)zipArchive.Entries.Count).ToPercentage(0.85d, 1.0d),
+                status:  TaskStatus.Running,
+                totalCount: zipArchive.Entries.Count,
+                finshedCount: count);
     }
 
     #endregion
