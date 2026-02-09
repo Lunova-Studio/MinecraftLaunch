@@ -7,6 +7,7 @@ using MinecraftLaunch.Components.Provider;
 using MinecraftLaunch.Extensions;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Installer.Modpack;
 
@@ -30,10 +31,10 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
 
     public static CurseforgeModpackInstallEntry ParseModpackInstallEntry(string modpackPath) {
         using var zipArchive = ZipFile.OpenRead(modpackPath);
-        var json = zipArchive?.GetEntry("manifest.json")?.ReadAsString()
+        using var json = zipArchive?.GetEntry("manifest.json")?.Open()
             ?? throw new ArgumentException("Not found manifest.json");
 
-        var entry = json.Deserialize(CurseforgeModpackInstallEntryContext.Default.CurseforgeModpackInstallEntry)
+        var entry = JsonSerializer.Deserialize(json,CurseforgeModpackInstallEntryContext.Default.CurseforgeModpackInstallEntry)
             ?? throw new InvalidOperationException("Failed to parse manifest.json");
 
         return entry;

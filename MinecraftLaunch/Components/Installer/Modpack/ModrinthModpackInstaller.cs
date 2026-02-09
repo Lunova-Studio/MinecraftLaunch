@@ -4,8 +4,8 @@ using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Components.Downloader;
 using MinecraftLaunch.Extensions;
-using System.IO;
 using System.IO.Compression;
+using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Installer.Modpack;
 
@@ -17,10 +17,10 @@ public sealed class ModrinthModpackInstaller : InstallerBase {
 
     public static ModrinthModpackInstallEntry ParseModpackInstallEntry(string modpackPath) {
         using var zipArchive = ZipFile.OpenRead(modpackPath);
-        var json = zipArchive?.GetEntry("modrinth.index.json")?.ReadAsString()
+        using var json = zipArchive?.GetEntry("modrinth.index.json")?.Open()
             ?? throw new ArgumentException("Not found modrinth.index.json");
 
-        return json.Deserialize(ModrinthModpackInstallEntryContext.Default.ModrinthModpackInstallEntry)
+        return JsonSerializer.Deserialize(json,ModrinthModpackInstallEntryContext.Default.ModrinthModpackInstallEntry)
             ?? throw new InvalidOperationException("Failed to parse modrinth.index.json");
     }
 
