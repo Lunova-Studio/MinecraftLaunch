@@ -5,6 +5,7 @@ using MinecraftLaunch.Base.Models.Network;
 using MinecraftLaunch.Extensions;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Installer.Modpack;
 
@@ -48,10 +49,10 @@ public sealed class McbbsModpackInstaller : InstallerBase {
 
     public static McbbsModpackInstallEntry ParseModpackInstallEntry(string modpackPath) {
         using var zipArchive = ZipFile.OpenRead(modpackPath);
-        var json = zipArchive?.GetEntry("mcbbs.packmeta")?.ReadAsString()
+        using var stream = zipArchive?.GetEntry("mcbbs.packmeta")?.Open()
             ?? throw new ArgumentException("Not found mcbbs.packmeta");
 
-        return json.Deserialize(McbbsModpackInstallEntryContext.Default.McbbsModpackInstallEntry)
+        return JsonSerializer.Deserialize(stream,McbbsModpackInstallEntryContext.Default.McbbsModpackInstallEntry)
             ?? throw new InvalidOperationException("Failed to parsemcbbs.packmeta");
     }
 
