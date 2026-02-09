@@ -10,65 +10,6 @@ internal static class ModPackUtils
     public const char ZipPathSeparator = '/';
     
 
-    public static async Task ExtractParallelAccelerationAsync(
-        string srcZipPath,
-        string overridesPrefix,
-        string independentAndFullWorkingPath,
-        /*执行线程不保证*/Action<ZipArchive> whenEachEntryCompleted = null,
-        CancellationToken cancellationToken = default)
-    {
-        // 从-1开始即第一次递增后为0
-        const int startOffset = -1;
-        //Init
-        var parallelCount = Environment.ProcessorCount * 2;
-        var taskThreads = new Task[parallelCount];
-        var zips = new ZipArchive[parallelCount];
-        var targetOffset = startOffset;
-        var concurrentOffset = startOffset;
-        for (var i = 0; i < parallelCount; i++)
-        {
-            zips[i] = ZipFile.OpenRead(srcZipPath);
-            // 首次循环读取长度
-            if (i is 0) targetOffset = zips[0].Entries.Count;
-            // 拷贝tid用于不同实例闭包
-            var taskThreadId = i;
-            taskThreads[i] = Task.Run(ExtractManyJob, cancellationToken);
-            continue;
-
-            // main job
-            async Task ExtractManyJob()
-            {
-                while (true)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var entryIndex = Interlocked.Increment(ref concurrentOffset);
-                    // entries已全部复制
-                    // targetOffset不会被修改
-                    // ReSharper disable once AccessToModifiedClosure
-                    if (entryIndex >= targetOffset) return;
-                    var entry = zips[taskThreadId].Entries[entryIndex];
-                    if (!IsShouldExtract(entry, overridesPrefix)) continue;
-                    // 获取路径
-                    var dstPath = Path.Combine(independentAndFullWorkingPath,
-                        RemoveOverridesPrefix(entry.FullName, overridesPrefix));
-                    // 复制
-                    await entry.ExtractToFileAsync(dstPath,true,cancellationToken).ConfigureAwait(false);
-                    whenEachEntryCompleted?.Invoke(zips[taskThreadId]);
-                }
-            }
-        }
-
-        // 确保资源释放,Task只会在await时重新抛出
-        try
-        {
-            await Task.WhenAll(taskThreads);
-        }
-        finally
-        {
-            foreach (var zip in zips) zip.Dispose();
-        }
-    }
-
     public static async Task ExtractSingleThreadAsync(
         string srcZipPath,
         string overridesPrefix,
