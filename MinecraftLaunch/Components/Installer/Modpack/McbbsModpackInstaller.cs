@@ -75,39 +75,28 @@ public sealed class McbbsModpackInstaller : InstallerBase {
     #region Privates
 
     private async Task ExtractModpackAsync(CancellationToken cancellationToken) {
-        var zipArchive = ZipFile.OpenRead(ModpackPath);
-        var entries = zipArchive?.Entries;
-        ReportProgress(InstallStep.ExtractModpack, 0.10d, TaskStatus.Running, entries.Count, 0);
+      
+        ReportProgress(InstallStep.ExtractModpack, 0.85d, TaskStatus.Running, 0, 0); // 此处未开始解析,返回0
 
         const string decompressPrefix = "overrides";
-        string woringPath = Minecraft.ToWorkingPath(true);
 
-        int count = 0;
-        var tasks = entries.Select(x => Task.Run(() => {
-            lock (zipArchive) {
-                ReportProgress(InstallStep.ExtractModpack,
-                    ((double)Interlocked.Increment(ref count) / (double)entries.Count).ToPercentage(0.1d, 1.0d),
-                    TaskStatus.Running, entries.Count, count);
+        var count = 0; 
+        await ModPackUtils.ExtractSingleThreadAsync(
+            srcZipPath: ModpackPath,
+            overridesPrefix: decompressPrefix,
+            independentAndFullWorkingPath: Minecraft.ToWorkingPath(true),
+            whenEachEntryCompleted: ReportEntryExtractingProgress,
+            cancellationToken: cancellationToken);
+        return;
+        
 
-                if (!x.FullName.StartsWith(decompressPrefix))
-                    return;
-
-                var subPath = x.FullName[(decompressPrefix.Length + 1)..];
-                if (string.IsNullOrEmpty(subPath))
-                    return;
-
-                var filePath = new FileInfo(Path.Combine(woringPath, subPath));
-                if (x.FullName.EndsWith('/')) {
-                    filePath.Directory.Create();
-                    return;
-                }
-
-                x.ExtractTo(filePath.FullName);
-            }
-        }, cancellationToken));
-
-        await Task.WhenAll(tasks);
-        zipArchive.Dispose();
+        void ReportEntryExtractingProgress(ZipArchive zipArchive) =>
+            ReportProgress(
+                step: InstallStep.ExtractModpack, 
+                progress: (Interlocked.Increment(ref count) / (double)zipArchive.Entries.Count).ToPercentage(0.85d, 1.0d),
+                status:  TaskStatus.Running,
+                totalCount: zipArchive.Entries.Count,
+                finshedCount: count);
     }
 
     #endregion
