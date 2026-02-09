@@ -1,4 +1,5 @@
-﻿using MinecraftLaunch.Base.Enums;
+﻿using System.Diagnostics;
+using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Models.Network;
@@ -41,10 +42,11 @@ public sealed class CurseforgeModpackInstaller : InstallerBase {
     }
 
     public static async IAsyncEnumerable<IInstallEntry> ParseModLoaderEntryByManifestAsync(CurseforgeModpackInstallEntry entry, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
-        foreach (var loader in entry.Minecraft.ModLoaders) {
+        Debug.Assert(entry.Minecraft.ModLoaders.ValueKind is JsonValueKind.Array);
+        foreach (var loader in entry.Minecraft.ModLoaders.EnumerateArray()) {
             cancellationToken.ThrowIfCancellationRequested();
 
-            (bool isPrimary, string id) = (loader.GetBool("primary"), loader.GetString("id"));
+            (bool isPrimary, string id) = (loader.GetProperty("primary"u8).GetBoolean(), loader.GetProperty("id"u8).GetString());
             var idDatas = id.Split('-');
 
             var loaderVersion = idDatas.Last();

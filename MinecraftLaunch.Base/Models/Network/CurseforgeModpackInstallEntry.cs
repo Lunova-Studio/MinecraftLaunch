@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
@@ -14,12 +15,12 @@ public record CurseforgeModpackInstallEntry {
 
     [JsonIgnore] public string McVersion => Minecraft.McVersion;
     [JsonIgnore] public bool IsOverride => Overrides is "overrides";
-    [JsonIgnore] public string PrimaryModLoader => Minecraft.ModLoaders?.FirstOrDefault()?["id"]?.GetValue<string>().Split("-")?.First();
+    [JsonIgnore] public string PrimaryModLoader => Minecraft.ModLoaders.GetArrayLength() >=0 ? Minecraft.ModLoaders[0].GetString()!.Split("-")?.First() : null;
 }
 
 public record CurseforgeModpackMinecraftEntry {
     [JsonPropertyName("version")] public string McVersion { get; set; }
-    [JsonPropertyName("modLoaders")] public IEnumerable<JsonNode> ModLoaders { get; set; }
+    [JsonPropertyName("modLoaders")] public /*Array*/ JsonElement ModLoaders { get; set; }
 }
 
 public record CurseforgeModpackFileEntry {
