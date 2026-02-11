@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Compression;
 using System.Net.Sockets;
 using MinecraftLaunch.Extensions;
@@ -17,6 +18,8 @@ internal static class ModPackUtils
         /*执行线程不保证*/Action<ZipArchive> whenEachEntryCompleted = null,
         CancellationToken cancellationToken = default)
     {
+        Debug.Assert(srcZipPath is not null || overridesPrefix is not null || independentAndFullWorkingPath is not null);
+        cancellationToken.ThrowIfCancellationRequested(); 
         using var zip = ZipFile.OpenRead(srcZipPath);
         foreach (var item in zip.Entries)
         {
