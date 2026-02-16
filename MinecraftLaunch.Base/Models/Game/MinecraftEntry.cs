@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Utilities;
@@ -220,7 +221,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
 
     internal string GetLibraryPath() => GetLibraryPath(this.MavenName);
 
-    internal static string GetLibraryPath(string mavenName) {
+    internal static string GetLibraryPathOld(string mavenName) {
         string path = "";
 
         var extension = mavenName.Contains('@') ? mavenName.Split('@') : [];
@@ -240,6 +241,82 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
         filename += extension.Length != 0 ? extension[1] : "jar";
 
         return Path.Combine(path, filename);
+    }
+
+    internal static string GetLibraryPath(string mavenName)
+    {
+        scoped Span<Range> extensionRanges = stackalloc Range[2];
+        var extensionCount = mavenName.AsSpan().Split(extensionRanges, '@');
+        var mainSpan = mavenName.AsSpan(extensionRanges[0]);
+        var extensionSpan = extensionCount > 1 ? mavenName.AsSpan(extensionRanges[1]) : default;
+
+        scoped Span<Range> subRanges = stackalloc Range[4];
+        var subCount = mainSpan.Split(subRanges, ':');
+        Debug.Assert(subCount >= 3, "Maven name must have at least group:artifact:version");
+
+        // 申请缓冲区
+        var bufferSize = mavenName.Length + mainSpan[subRanges[0]].Length + 10;
+        var buffer = ArrayPool<char>.Shared.Rent(bufferSize);
+        var offset = 0;
+
+        try
+        {
+            // 1. 处理 Group name（替换 . 为 Path.DirectorySeparatorChar）
+            scoped var groupSpan = mainSpan[subRanges[0]];
+            groupSpan.Replace(buffer, '.', Path.DirectorySeparatorChar);
+            offset += groupSpan.Length;
+            buffer[offset++] = Path.DirectorySeparatorChar;
+
+            // 2. 处理 Artifact name
+            scoped var artifactSpan = mainSpan[subRanges[1]];
+            artifactSpan.CopyTo(buffer.AsSpan(offset));
+            offset += artifactSpan.Length;
+            buffer[offset++] = Path.DirectorySeparatorChar;
+
+            // 3. 处理 Version
+            scoped var versionSpan = mainSpan[subRanges[2]];
+            versionSpan.CopyTo(buffer.AsSpan(offset));
+            offset += versionSpan.Length;
+            buffer[offset++] = Path.DirectorySeparatorChar;
+
+            // 4.1 Artifact
+            artifactSpan.CopyTo(buffer.AsSpan(offset));
+            offset += artifactSpan.Length;
+
+            // 4.2 -version
+            buffer[offset++] = '-';
+            versionSpan.CopyTo(buffer.AsSpan(offset));
+            offset += versionSpan.Length;
+
+            // 4.3 -classifier
+            if (subCount > 3)
+            {
+                buffer[offset++] = '-';
+                scoped var classifierSpan = mainSpan[subRanges[3]];
+                classifierSpan.CopyTo(buffer.AsSpan(offset));
+                offset += classifierSpan.Length;
+            }
+
+            // 4.4 .extension
+            buffer[offset++] = '.';
+            if (!extensionSpan.IsEmpty)
+            {
+                extensionSpan.CopyTo(buffer.AsSpan(offset));
+                offset += extensionSpan.Length;
+            }
+            else
+            {
+                "jar".AsSpan().CopyTo(buffer.AsSpan(offset));
+                offset += 3;
+            }
+
+            // 5. 生成最终字符串
+            return new string(buffer.AsSpan(0, offset));
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(buffer);
+        }
     }
 
     public static MinecraftLibrary ParseJsonNode(LibraryEntry libNode, string minecraftFolderPath) {
