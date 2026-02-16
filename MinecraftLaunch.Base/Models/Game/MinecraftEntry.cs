@@ -4,9 +4,11 @@ using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Utilities;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+#if DEBUG
+using Xunit;
+#endif
 
 namespace MinecraftLaunch.Base.Models.Game;
 
@@ -318,6 +320,49 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
             ArrayPool<char>.Shared.Return(buffer);
         }
     }
+    
+#if DEBUG
+    [Theory]
+    [Trait("Category", "Debug")]
+    // 这些是AI生成的测试样例
+    // 基础格式 (group:artifact:version)
+    [InlineData("com.google.guava:guava:31.1-jre")]
+    [InlineData("org.springframework:spring-core:5.3.23")]
+    [InlineData("io.netty:netty-all:4.1.82.Final")]
+// 带 Classifier (group:artifact:version:classifier)
+    [InlineData("org.lwjgl:lwjgl:3.3.1:natives-windows")]
+    [InlineData("com.android.tools.build:gradle:7.2.0:sources")]
+    [InlineData("org.jetbrains.kotlin:kotlin-stdlib:1.7.10:javadoc")]
+// 带扩展名 (group:artifact:version@extension)
+    [InlineData("com.google.android:android:4.1.1.4@aar")]
+    [InlineData("androidx.appcompat:appcompat:1.5.1@aar")]
+    [InlineData("com.squareup.okhttp3:okhttp:4.10.0@pom")]
+// 完整格式 (group:artifact:version:classifier@extension)
+    [InlineData("org.lwjgl:lwjgl-glfw:3.3.1:natives-linux@jar")]
+    [InlineData("com.android.support:support-v4:28.0.0:sources@jar")]
+    [InlineData("io.fabric8:kubernetes-client:6.0.0:tests@jar")]
+// 多层级 Group
+    [InlineData("org.apache.logging.log4j:log4j-core:2.19.0")]
+    [InlineData("com.fasterxml.jackson.core:jackson-databind:2.13.4")]
+    [InlineData("org.hibernate.validator:hibernate-validator:7.0.5.Final")]
+// 边界情况
+    [InlineData("a:b:1.0")]
+    [InlineData("com.example:my-lib:1.0.0-SNAPSHOT")]
+    [InlineData("org.test:artifact:1.0-beta.1:classifier@zip")]
+    [InlineData("io.a.b.c.d.e.f:deep-artifact:1.0.0")]
+// 特殊版本号
+    [InlineData("com.google.code.gson:gson:2.10.1")]
+    [InlineData("org.junit.jupiter:junit-jupiter:5.9.0-M1")]
+    [InlineData("com.squareup.retrofit2:retrofit:2.9.0-RC1")]
+    public static void T2T(string src)
+    {
+        var libraryPathOld = GetLibraryPathOld(src);
+        var actualMemory = GetLibraryPath(src);
+        Console.WriteLine(actualMemory);
+        Console.WriteLine(libraryPathOld);
+        Assert.Equal(libraryPathOld,actualMemory);
+    }
+#endif
 
     public static MinecraftLibrary ParseJsonNode(LibraryEntry libNode, string minecraftFolderPath) {
         // Check platform-specific library name
