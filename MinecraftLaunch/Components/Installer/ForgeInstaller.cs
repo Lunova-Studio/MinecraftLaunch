@@ -77,8 +77,9 @@ public sealed class ForgeInstaller : InstallerBase {
             ? $"https://bmclapi2.bangbang93.com/neoforge/list/{mcVersion}"
             : $"https://bmclapi2.bangbang93.com/forge/minecraft/{mcVersion}";
 
-        string json = await packagesUrl.GetStringAsync(cancellationToken: cancellationToken);
-        var entries = json.Deserialize(ForgeInstallEntryContext.Default.IEnumerableForgeInstallEntry)
+        await using var json = await packagesUrl.GetStreamAsync(cancellationToken: cancellationToken);
+        var entries = (await JsonSerializer.DeserializeAsync(json,
+                ForgeInstallEntryContext.Default.IEnumerableForgeInstallEntry, cancellationToken))
             .OrderByDescending(entry => entry.Build);
 
         foreach (var entry in entries)

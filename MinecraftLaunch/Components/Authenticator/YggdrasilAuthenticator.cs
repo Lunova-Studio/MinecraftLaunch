@@ -5,6 +5,7 @@ using MinecraftLaunch.Base.Models.Authentication.Yggdrasil;
 using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace MinecraftLaunch.Components.Authenticator;
 
@@ -41,8 +42,8 @@ public sealed class YggdrasilAuthenticator {
             YggdrasilRequestPayloadContext.Default.YggdrasilRefreshPayload),
                 cancellationToken: cancellationToken);
 
-        var json = await responseMessage.GetStringAsync();
-        var entry = json.Deserialize(YggdrasilResponseContext.Default.YggdrasilResponse);
+        await using var json = await responseMessage.GetStreamAsync();
+        var entry = await JsonSerializer.DeserializeAsync(json,YggdrasilResponseContext.Default.YggdrasilResponse, cancellationToken);
         var profile = entry.SelectedProfile;
 
         return new YggdrasilAccount(profile.Name, Guid.Parse(profile.Id), entry.AccessToken, _url, entry.ClientToken);
@@ -65,8 +66,8 @@ public sealed class YggdrasilAuthenticator {
             YggdrasilRequestPayloadContext.Default.YggdrasilAuthenticatePayload),
                 cancellationToken: cancellationToken);
 
-        var json = await responseMessage.GetStringAsync();
-        var entry = json.Deserialize(YggdrasilResponseContext.Default.YggdrasilResponse);
+        await using var json = await responseMessage.GetStreamAsync();
+        var entry = await JsonSerializer.DeserializeAsync(json,YggdrasilResponseContext.Default.YggdrasilResponse, cancellationToken);
 
         return entry.AvailableProfiles.Select(profile =>
             new YggdrasilAccount(profile.Name, Guid.Parse(profile.Id), entry.AccessToken, _url, entry.ClientToken));

@@ -31,9 +31,8 @@ public sealed class MicrosoftAuthenticator {
         var result = await request.PostAsync(new FormUrlEncodedContent(payload),
             cancellationToken: cancellationToken);
 
-        var json = await result.GetStringAsync();
-        var response = json.Deserialize(OAuth2TokenResponseContext.Default.OAuth2TokenResponse);
-
+        await using var json = await result.GetStreamAsync();
+        var response = await JsonSerializer.DeserializeAsync(json,OAuth2TokenResponseContext.Default.OAuth2TokenResponse, cancellationToken);
         return await AuthenticateAsync(response, cancellationToken);
     }
 
@@ -73,10 +72,10 @@ public sealed class MicrosoftAuthenticator {
         };
 
         var request = HttpUtil.Request("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode");
-        string json = await request.PostUrlEncodedAsync(parameters, cancellationToken: cancellationToken)
-            .ReceiveString();
+        await using var json = await request.PostUrlEncodedAsync(parameters, cancellationToken: cancellationToken)
+            .ReceiveStream();
 
-        var codeResponse = json.Deserialize(DeviceCodeResponseContext.Default.DeviceCodeResponse);
+        var codeResponse = await JsonSerializer.DeserializeAsync(json,DeviceCodeResponseContext.Default.DeviceCodeResponse, cancellationToken);
         deviceCode.Invoke(codeResponse);
 
         //Polling

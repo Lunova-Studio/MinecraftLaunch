@@ -25,10 +25,10 @@ public sealed class QuiltInstaller : InstallerBase {
     }
 
     public static async Task<IEnumerable<QuiltInstallEntry>> EnumerableQuiltAsync(string mcVersion, CancellationToken cancellationToken = default) {
-        string json = await $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}"
-            .GetStringAsync(cancellationToken: cancellationToken);
+        await using var json = await $"https://meta.quiltmc.org/v3/versions/loader/{mcVersion}"
+            .GetStreamAsync(cancellationToken: cancellationToken);
 
-        var entries = json.Deserialize(QuiltInstallEntryContext.Default.IEnumerableQuiltInstallEntry);
+        var entries = await JsonSerializer.DeserializeAsync(json,QuiltInstallEntryContext.Default.IEnumerableQuiltInstallEntry, cancellationToken);
         return entries;
     }
 

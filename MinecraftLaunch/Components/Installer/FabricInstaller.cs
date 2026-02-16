@@ -25,10 +25,11 @@ public sealed class FabricInstaller : InstallerBase {
     }
 
     public static async Task<IEnumerable<FabricInstallEntry>> EnumerableFabricAsync(string mcVersion, CancellationToken cancellationToken = default) {
-        string json = await HttpUtil.FlurlClient.Request($"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}")
-            .GetStringAsync(cancellationToken: cancellationToken);
+        await using var json = await HttpUtil.FlurlClient.Request($"https://meta.fabricmc.net/v2/versions/loader/{mcVersion}")
+            .GetStreamAsync(cancellationToken: cancellationToken);
 
-        var entries = json.Deserialize(FabricInstallEntryContext.Default.IEnumerableFabricInstallEntry)
+        var entries = (await JsonSerializer.DeserializeAsync(json,
+                FabricInstallEntryContext.Default.IEnumerableFabricInstallEntry, cancellationToken))
             .OrderByDescending(x => new Version(x.Loader.Version.Replace(x.Loader.Separator, ".")));
 
         return entries;
