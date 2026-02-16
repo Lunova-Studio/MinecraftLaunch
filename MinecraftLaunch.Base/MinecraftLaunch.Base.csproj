@@ -18,6 +18,7 @@
 		<Nullable>disable</Nullable>
 		<PackageIcon>logo.png</PackageIcon>
 		<GenerateDocumentationFile>False</GenerateDocumentationFile>
+		<VSTestNoBuild>true</VSTestNoBuild>
   </PropertyGroup>
 
 	<ItemGroup>
