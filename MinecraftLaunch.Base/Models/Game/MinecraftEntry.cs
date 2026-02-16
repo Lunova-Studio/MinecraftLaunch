@@ -585,12 +585,13 @@ public class ForgeLibrary(string mavenName) : MinecraftLibrary(mavenName), IDown
 }
 
 public sealed class VanillaLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
+    private string _url;
     long? IVerifiableDependency.Size => Size;
 
     public required long? Size { get; init; }
     public required string Sha1 { get; init; }
     // 值是不变的,添加缓存
-    public string Url => field ??= $"https://libraries.minecraft.net/{GetLibraryPath().Replace('\\', '/')}";
+    public string Url => _url ??= $"https://libraries.minecraft.net/{GetLibraryPath().Replace('\\', '/')}";
 }
 
 public sealed class NeoForgeLibrary(string mavenName) : ForgeLibrary(mavenName);
@@ -605,20 +606,22 @@ public sealed class LegacyForgeLibrary(string mavenName, string url) : Minecraft
 public sealed class OptiFineLibrary(string mavenName) : MinecraftLibrary(mavenName);
 
 public sealed class FabricLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
+    private string _url;
     long? IVerifiableDependency.Size => Size;
 
     public long? Size { get; set; }
     public string Sha1 { get; set; }
     // 添加缓存
-    public string Url => field ??=$"https://maven.fabricmc.net/{GetLibraryPath().Replace('\\', '/')}";
+    public string Url => _url ??=$"https://maven.fabricmc.net/{GetLibraryPath().Replace('\\', '/')}";
 }
 
 public class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
+    private string _url;
     long? IVerifiableDependency.Size => Size;
 
     public long? Size { get; set; }
     public string Sha1 { get; set; }
-    public string Url => field ??= $"https://maven.quiltmc.org/repository/release/{GetLibraryPath().Replace('\\', '/')}";
+    public string Url => _url ??= $"https://maven.quiltmc.org/repository/release/{GetLibraryPath().Replace('\\', '/')}";
 }
 
 public class DownloadableDependency(string mavenName, string url) : MinecraftLibrary(mavenName), IDownloadDependency {
