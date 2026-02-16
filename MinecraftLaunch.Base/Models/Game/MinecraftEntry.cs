@@ -315,7 +315,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
             || libNode.ServerRequest != null) {
             string legacyForgeLibraryUrl = (libNode.MavenUrl == "https://maven.minecraftforge.net/"
                 ? "https://maven.minecraftforge.net/"
-                : "https://libraries.minecraft.net/") + GetLibraryPath(libNode.MavenName).Replace("\\", "/");
+                : "https://libraries.minecraft.net/") + GetLibraryPath(libNode.MavenName).Replace('\\','/');
 
             return new LegacyForgeLibrary(libNode.MavenName, legacyForgeLibraryUrl) {
                 MinecraftFolderPath = minecraftFolderPath,
@@ -466,7 +466,8 @@ public sealed class VanillaLibrary(string mavenName) : MinecraftLibrary(mavenNam
 
     public required long? Size { get; init; }
     public required string Sha1 { get; init; }
-    public string Url => $"https://libraries.minecraft.net/{GetLibraryPath().Replace("\\", "/")}";
+    // 值是不变的,添加缓存
+    public string Url => field ??= $"https://libraries.minecraft.net/{GetLibraryPath().Replace('\\', '/')}";
 }
 
 public sealed class NeoForgeLibrary(string mavenName) : ForgeLibrary(mavenName);
@@ -485,7 +486,8 @@ public sealed class FabricLibrary(string mavenName) : MinecraftLibrary(mavenName
 
     public long? Size { get; set; }
     public string Sha1 { get; set; }
-    public string Url => $"https://maven.fabricmc.net/{GetLibraryPath().Replace("\\", "/")}";
+    // 添加缓存
+    public string Url => field ??=$"https://maven.fabricmc.net/{GetLibraryPath().Replace('\\', '/')}";
 }
 
 public class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
@@ -493,7 +495,7 @@ public class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDown
 
     public long? Size { get; set; }
     public string Sha1 { get; set; }
-    public string Url => $"https://maven.quiltmc.org/repository/release/{GetLibraryPath().Replace("\\", "/")}";
+    public string Url => field ??= $"https://maven.quiltmc.org/repository/release/{GetLibraryPath().Replace('\\', '/')}";
 }
 
 public class DownloadableDependency(string mavenName, string url) : MinecraftLibrary(mavenName), IDownloadDependency {
