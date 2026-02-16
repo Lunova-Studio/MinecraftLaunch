@@ -26,7 +26,7 @@ public sealed class CurseforgeProvider {
 
         await using var stream = await responseMessage.GetStreamAsync();
         using var doc  = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        var exactMatches = doc.RootElement.GetPropertyNullable("data"u8)?.GetPropertyNullable("exactMatches");
+        var exactMatches = doc.RootElement.GetPropertyNullable("data"u8)?.GetPropertyNullable("exactMatches"u8);
         
         // 此处对API行为有变更,document会释放所以需要立即终结迭代器,不能延迟执行
         return exactMatches?
@@ -84,8 +84,8 @@ public sealed class CurseforgeProvider {
         using var doc  = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var dataElement = doc.RootElement.GetProperty("data"u8);
 
-        var popular = dataElement.GetPropertyNullable("popular");
-        var featured = dataElement.GetPropertyNullable("featured");
+        var popular = dataElement.GetPropertyNullable("popular"u8);
+        var featured = dataElement.GetPropertyNullable("featured"u8);
 
         
         if (popular is null || featured is null) return [];
