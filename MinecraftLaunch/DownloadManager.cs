@@ -35,7 +35,7 @@ public sealed class BmclApiSource : IDownloadMirror {
             return sourceUrl;
 
         foreach (var (src, mirror) in _replacementMap)
-            if (sourceUrl.StartsWith(src))
+            if (sourceUrl.StartsWith(src, StringComparison.Ordinal))
                 return sourceUrl.Replace(src, mirror);
 
         return sourceUrl;

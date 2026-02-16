@@ -3,6 +3,7 @@ using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Models.Logging;
 using MinecraftLaunch.Extensions;
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace MinecraftLaunch.Components.Logging;
@@ -192,12 +193,13 @@ public sealed partial class LogAnalyzer {
             details = details.Replace("Fabric Mods", "¨");
 
         details = details.Split('¨').LastOrDefault();
+        Debug.Assert(details is not null);
 
         //The FoegeMod is get all has the ".jar" lines and
         //the fabricmod is get all has the "Mod" lines.
         var modLines = new List<string>();
         foreach (var detail in details.Split(Environment.NewLine))
-            if (detail.Contains(".jar", StringComparison.CurrentCultureIgnoreCase) || (isFabricMod && detail.StartsWith("\t" + "\t") && !FabricModIdentifier().IsMatch(detail)))
+            if (detail.Contains(".jar", StringComparison.OrdinalIgnoreCase) || (isFabricMod && detail.StartsWith("\t\t", StringComparison.Ordinal) && !FabricModIdentifier().IsMatch(detail)))
                 modLines.Add(detail);
 
         var hintLines = new List<string>();

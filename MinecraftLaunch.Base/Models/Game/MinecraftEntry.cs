@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MinecraftLaunch.Base.Interfaces;
 using MinecraftLaunch.Base.Utilities;
 using System.Diagnostics.CodeAnalysis;
@@ -351,9 +352,9 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
         #endregion
 
         #region OptiFine Pattern
-
-        if (libNode.MavenName.StartsWith("optifine:optifine", StringComparison.CurrentCultureIgnoreCase)
-            || libNode.MavenName.StartsWith("optifine:launchwrapper-of", StringComparison.CurrentCultureIgnoreCase)) {
+        
+        if (libNode.MavenName.StartsWith("optifine:optifine", StringComparison.Ordinal)
+            || libNode.MavenName.StartsWith("optifine:launchwrapper-of", StringComparison.Ordinal)) {
             return new OptiFineLibrary(libNode.MavenName) {
                 IsNativeLibrary = false,
                 MinecraftFolderPath = minecraftFolderPath
