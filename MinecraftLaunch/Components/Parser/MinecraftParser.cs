@@ -50,18 +50,18 @@ public sealed class MinecraftParser {
         if (!versionsDirectory.Exists)
             return [];
 
-        foreach (DirectoryInfo dir in versionsDirectory.EnumerateDirectories()) {
-            try {
-                var entry = Parse(dir, list, out bool inheritedInstanceAlreadyFound);
-                int index = list.FindIndex(i => i.Id == entry.Id);
-                if (index != -1) {
-                    list.RemoveAt(index);
-                }
+        foreach (DirectoryInfo dir in versionsDirectory.EnumerateDirectories())
+        {
+            var entry = Parse(dir, list, out bool inheritedInstanceAlreadyFound);
+            int index = list.FindIndex(i => i.Id == entry.Id);
+            if (index != -1)
+            {
+                list.RemoveAt(index);
+            }
 
-                list.Add(entry);
-                if (entry is ModifiedMinecraftEntry m && m.HasInheritance && !inheritedInstanceAlreadyFound)
-                    list.Add(m.InheritedMinecraft);
-            } catch (Exception) { }
+            list.Add(entry);
+            if (entry is ModifiedMinecraftEntry m && m.HasInheritance && !inheritedInstanceAlreadyFound)
+                list.Add(m.InheritedMinecraft);
         }
 
         foreach (var processor in DataProcessors.Values) {
@@ -192,8 +192,7 @@ public sealed class MinecraftParser {
             // Find the inherited instance
             string inheritedInstanceId = minecraftJsonEntry.InheritsFrom
                 ?? throw new InvalidOperationException("InheritsFrom is not defined in client.json");
-
-            inheritedEntry = minecraftEntries.FirstOrDefault(i => i is VanillaMinecraftEntry v && v.Version.VersionId == inheritedInstanceId) as  VanillaMinecraftEntry;
+            inheritedEntry = minecraftEntries?.FirstOrDefault(i => i is VanillaMinecraftEntry v && v.Version.VersionId == inheritedInstanceId) as  VanillaMinecraftEntry;
 
             if (inheritedEntry is not null) {
                 foundInheritedInstanceInParsed = true;
