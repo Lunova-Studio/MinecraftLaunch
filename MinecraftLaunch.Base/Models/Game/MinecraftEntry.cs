@@ -78,39 +78,7 @@ public abstract class MinecraftEntry {
             _ => false,
         };
     }
-
-    private IEnumerable<MinecraftAsset> GetRequiredAssets_Old() {
-        // Identify file paths
-        string assetIndexJsonPath = AssetIndexJsonPath;
-        if (this is ModifiedMinecraftEntry { HasInheritance: true } instance)
-            assetIndexJsonPath = instance.InheritedMinecraft.AssetIndexJsonPath;
-
-        // Parse asset index json
-        Dictionary<string, AssetJsonEntry> assets;
-        // 这里不用using表达式语法是为了在yield前释放资源,防止被挂起导致池化内存压力增大
-        using (var stream = File.OpenRead(assetIndexJsonPath))
-        using (var doc = JsonDocument.Parse(stream))
-        {
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("objects"u8, out var value))
-                throw new InvalidDataException("Error in parsing asset index json file");
-            assets = value.Deserialize(AssetJsonEntryContext.Default.DictionaryStringAssetJsonEntry)
-                     ?? throw new InvalidDataException("Error in parsing asset index json file");
-        }
-
-        // Parse GameAsset objects
-        foreach (var (key, assetJsonNode) in assets) {
-            int size = assetJsonNode.Size;
-            var hash = assetJsonNode.Hash;
-
-            yield return new MinecraftAsset {
-                MinecraftFolderPath = MinecraftFolderPath,
-                Key = key,
-                Sha1 = hash,
-                Size = size
-            };
-        }
-    }
+    
     public IEnumerable<MinecraftAsset> GetRequiredAssets() {
         // Identify file paths
         var assetIndexJsonPath =
@@ -118,27 +86,22 @@ public abstract class MinecraftEntry {
                 ? inner.InheritedMinecraft.AssetIndexJsonPath
                 : this.AssetIndexJsonPath;
         // Parse asset index json
-        Dictionary<string, AssetJsonEntry> assets;
-        // 这里不用using表达式语法是为了在yield前释放资源,防止被挂起导致池化内存压力增大
-        using (var stream = File.OpenRead(assetIndexJsonPath))
-        using (var doc = JsonDocument.Parse(stream))
-        {
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("objects"u8, out var value))
-                throw new InvalidDataException("Error in parsing asset index json file");
-            assets = value.Deserialize(AssetJsonEntryContext.Default.DictionaryStringAssetJsonEntry)
-                     ?? throw new InvalidDataException("Error in parsing asset index json file");
-        }
-
         
+        using var stream = File.OpenRead(assetIndexJsonPath);
+        using var doc = JsonDocument.Parse(stream);
+        var root = doc.RootElement;
+        if (!root.TryGetProperty("objects"u8, out var value))
+            throw new InvalidDataException("Error in parsing asset index json file");
+        var assets = value;
+
         // Parse GameAsset objects
-        foreach (var (key, assetJsonNode) in assets) {
-            int size = assetJsonNode.Size;
-            var hash = assetJsonNode.Hash;
+        foreach (var item in assets.EnumerateObject()) {
+            var size = item.Value.GetProperty("size"u8).GetInt32();
+            var hash = item.Value.GetProperty("hash"u8).Deserialize(Sha1Data.Sha1DataSerializerContext.Default.Sha1Data);
 
             yield return new MinecraftAsset {
                 MinecraftFolderPath = MinecraftFolderPath,
-                Key = key,
+                Key = item.Name,
                 Sha1 = hash,
                 Size = size
             };
@@ -148,20 +111,26 @@ public abstract class MinecraftEntry {
     public (IEnumerable<MinecraftLibrary> Libraries, IEnumerable<MinecraftLibrary> NativeLibraries) GetRequiredLibraries() {
         List<MinecraftLibrary> libs = [];
         List<MinecraftLibrary> nativeLibs = [];
-
-        using var stream =  File.OpenRead(ClientJsonPath);
-        using var doc = JsonDocument.Parse(stream);
-        var root = doc.RootElement;
-        if(!root.TryGetProperty("libraries"u8,out var librariesElement))throw new InvalidDataException("client.json does not contain library information");
-        var libNodes = librariesElement.Deserialize(LibraryEntriesContext.Default.IEnumerableLibraryEntry)
+        IEnumerable<LibraryEntry> libNodes;
+        using (var stream = File.OpenRead(ClientJsonPath))
+        using (var doc = JsonDocument.Parse(stream))
+        {
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("libraries"u8, out var librariesElement))
+                throw new InvalidDataException("client.json does not contain library information");
+            libNodes =
+                librariesElement.Deserialize(LibraryEntriesContext.Default.IEnumerableLibraryEntry)
                 ?? throw new InvalidDataException("client.json does not contain library information");
+        }
 
-        foreach (var libNode in libNodes) {
+        foreach (var libNode in libNodes)
+        {
             if (libNode is null)
                 continue;
 
             // Check if a library is enabled
-            if (libNode.Rules is { } libRules) {
+            if (libNode.Rules is { } libRules)
+            {
                 if (!IsLibraryEnabled(libRules))
                     continue;
             }
@@ -171,7 +140,8 @@ public abstract class MinecraftEntry {
 
             if (gameLib.IsNativeLibrary)
                 nativeLibs.Add(gameLib);
-            else {
+            else
+            {
                 libs.Add(gameLib);
             }
         }
