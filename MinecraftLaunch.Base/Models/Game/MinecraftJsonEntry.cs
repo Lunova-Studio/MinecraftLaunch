@@ -1,7 +1,7 @@
 using System.Text.Json;
 using MinecraftLaunch.Base.Interfaces;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Base.Models.Game;
 
@@ -10,7 +10,7 @@ public class AssstIndex : MinecraftDependency, IDownloadDependency, IVerifiableD
 
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("url")] public string Url { get; set; }
-    [JsonPropertyName("sha1")] public string Sha1 { get; set; }
+    [JsonPropertyName("sha1")] public Sha1Data? Sha1 { get; set; }
     [JsonPropertyName("size")] public long? Size { get; set; }
 
     [JsonIgnore] public override string FilePath => Path.Combine("assets", "indexes", $"{Id}.json");
@@ -35,7 +35,7 @@ public record AssstIndexJsonEntry {
     [JsonPropertyName("id")] public string Id { get; set; }
     [JsonPropertyName("size")] public int Size { get; set; }
     [JsonPropertyName("url")] public string Url { get; set; }
-    [JsonPropertyName("sha1")] public string Sha1 { get; set; }
+    [JsonPropertyName("sha1")] public Sha1Data Sha1 { get; set; }
     [JsonPropertyName("totalSize")] public int TotalSize { get; set; }
 }
 

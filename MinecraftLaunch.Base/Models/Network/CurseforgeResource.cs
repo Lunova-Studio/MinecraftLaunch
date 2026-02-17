@@ -1,5 +1,6 @@
 using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Interfaces;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
@@ -32,7 +33,7 @@ public record CurseforgeResourceFile {
     public required bool IsAvailable { get; init; }
     public required bool IsServerPack { get; init; }
 
-    public required string Sha1 { get; init; }
+    public required Sha1Data? Sha1 { get; init; }
     public required string FileName { get; init; }
     public required string DisplayName { get; init; }
     public required string DownloadUrl { get; init; }

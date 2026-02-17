@@ -1,6 +1,8 @@
-﻿namespace MinecraftLaunch.Base.Interfaces;
+﻿using MinecraftLaunch.Base.Models.SHA1;
+
+namespace MinecraftLaunch.Base.Interfaces;
 
 public interface IVerifiableDependency {
     long? Size { get; }
-    string Sha1 { get; }
+    Sha1Data? Sha1 { get; }
 }

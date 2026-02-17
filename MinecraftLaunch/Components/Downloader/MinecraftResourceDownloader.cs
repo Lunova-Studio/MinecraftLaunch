@@ -111,15 +111,10 @@ public sealed class MinecraftResourceDownloader {
 
         bool VerifySha1() {
             using var fileStream = File.OpenRead(dep.FullPath);
-            byte[] sha1Bytes = SHA1.HashData(fileStream);
-
-#if NET9_0_OR_GREATER
-            string sha1Str = Convert.ToHexStringLower(sha1Bytes);
-#else
-            string sha1Str = BitConverter.ToString(sha1Bytes).Replace("-", string.Empty).ToLowerInvariant();
-#endif
-
-            return sha1Str == verifiableDependency.Sha1;
+            var sha1Bytes = (Span<byte>)stackalloc byte[20];
+            SHA1.HashData(fileStream, sha1Bytes);
+            var sp = verifiableDependency.Sha1.Value;
+            return sha1Bytes.SequenceEqual(sp);
         }
 
         bool VerifySize() {

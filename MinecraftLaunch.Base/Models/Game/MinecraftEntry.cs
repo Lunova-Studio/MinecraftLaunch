@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using MinecraftLaunch.Base.Models.SHA1;
 #if DEBUG
 using Xunit;
 #endif
@@ -78,7 +79,7 @@ public abstract class MinecraftEntry {
         };
     }
 
-    public IEnumerable<MinecraftAsset> GetRequiredAssets() {
+    private IEnumerable<MinecraftAsset> GetRequiredAssets_Old() {
         // Identify file paths
         string assetIndexJsonPath = AssetIndexJsonPath;
         if (this is ModifiedMinecraftEntry { HasInheritance: true } instance)
@@ -100,7 +101,40 @@ public abstract class MinecraftEntry {
         // Parse GameAsset objects
         foreach (var (key, assetJsonNode) in assets) {
             int size = assetJsonNode.Size;
-            string hash = assetJsonNode.Hash ?? throw new InvalidDataException("Invalid asset index");
+            var hash = assetJsonNode.Hash;
+
+            yield return new MinecraftAsset {
+                MinecraftFolderPath = MinecraftFolderPath,
+                Key = key,
+                Sha1 = hash,
+                Size = size
+            };
+        }
+    }
+    public IEnumerable<MinecraftAsset> GetRequiredAssets() {
+        // Identify file paths
+        var assetIndexJsonPath =
+            this is ModifiedMinecraftEntry { HasInheritance: true } inner
+                ? inner.InheritedMinecraft.AssetIndexJsonPath
+                : this.AssetIndexJsonPath;
+        // Parse asset index json
+        Dictionary<string, AssetJsonEntry> assets;
+        // 这里不用using表达式语法是为了在yield前释放资源,防止被挂起导致池化内存压力增大
+        using (var stream = File.OpenRead(assetIndexJsonPath))
+        using (var doc = JsonDocument.Parse(stream))
+        {
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("objects"u8, out var value))
+                throw new InvalidDataException("Error in parsing asset index json file");
+            assets = value.Deserialize(AssetJsonEntryContext.Default.DictionaryStringAssetJsonEntry)
+                     ?? throw new InvalidDataException("Error in parsing asset index json file");
+        }
+
+        
+        // Parse GameAsset objects
+        foreach (var (key, assetJsonNode) in assets) {
+            int size = assetJsonNode.Size;
+            var hash = assetJsonNode.Hash;
 
             yield return new MinecraftAsset {
                 MinecraftFolderPath = MinecraftFolderPath,
@@ -302,7 +336,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
 
         // 申请缓冲区
         var bufferSize = mavenName.Length + mainSpan[subRanges[0]].Length + 40;
-        var buffer = ArrayPool<char>.Shared.Rent((int)bufferSize);
+        var buffer = ArrayPool<char>.Shared.Rent(bufferSize);
         var offset = 0;
 
         try
@@ -375,7 +409,7 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
 
         if (libNode.DownloadInformation != null) {
             DownloadArtifactEntry artifactNode = GetLibraryArtifactInfo(libNode);
-            if (artifactNode.Sha1 is null || artifactNode.Size is null || artifactNode.Url is null)
+            if (artifactNode.Size is null || artifactNode.Url is null)
                 throw new InvalidDataException("Invalid artifact node");
 
             #region Vanilla Pattern
@@ -455,8 +489,8 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
             return new FabricLibrary(libNode.MavenName) {
                 MinecraftFolderPath = minecraftFolderPath,
                 IsNativeLibrary = false,
-                Size = libNode?.Size,
-                Sha1 = libNode?.Sha1
+                Size = libNode.Size,
+                Sha1 = libNode.Sha1!.Value
             };
         }
 
@@ -519,35 +553,54 @@ public abstract partial class MinecraftLibrary : MinecraftDependency {
     private static partial Regex GenerateMavenParseRegex();
 }
 
-public class MinecraftClient : MinecraftDependency, IDownloadDependency, IVerifiableDependency {
+public sealed class MinecraftClient : MinecraftDependency, IDownloadDependency, IVerifiableDependency {
     public override string FilePath => Path.Combine("versions", ClientId, $"{ClientId}.jar");
     public required string ClientId { get; init; }
     public required string Url { get; init; }
     public required long? Size { get; init; }
     long? IVerifiableDependency.Size => Size;
-    public required string Sha1 { get; init; }
+    public required Sha1Data? Sha1 { get; init; }
 }
 
 public sealed class MinecraftAsset : MinecraftDependency, IDownloadDependency, IVerifiableDependency {
     public required string Key { get; set; }
     public required long? Size { get; init; }
-    public required string Sha1 { get; init; }
-    public string Url => $"https://resources.download.minecraft.net/{Sha1[0..2]}/{Sha1}";
-    public override string FilePath => Path.Combine("assets", "objects", Sha1[0..2], Sha1);
+    public required Sha1Data? Sha1 { get; init; }
+
+
+    public string Url
+    {
+        get
+        {
+            var buf = (Span<char>)stackalloc char[40];
+            Sha1!.Value.FormatTo(buf);
+            return $"https://resources.download.minecraft.net/{buf[..2]}/{buf}";
+        }
+    }
+
+    public override string FilePath
+    {
+        get
+        {
+            var buf = (Span<char>)stackalloc char[40];
+            Sha1!.Value.FormatTo(buf);
+            return $"assets{Path.DirectorySeparatorChar}objects{Path.DirectorySeparatorChar}{buf[..2]}{Path.DirectorySeparatorChar}{buf}";
+        }
+    }
 
     long? IVerifiableDependency.Size => Size;
 }
 
-public record DownloadArtifactEntry {
+public sealed record DownloadArtifactEntry {
     [JsonPropertyName("url")] public string Url { get; set; }
     [JsonPropertyName("size")] public long? Size { get; set; }
     [JsonPropertyName("path")] public string Path { get; set; }
-    [JsonPropertyName("sha1")] public string Sha1 { get; set; }
+    [JsonPropertyName("sha1")] public Sha1Data? Sha1 { get; set; }
 }
 
-public record LibraryEntry {
+public sealed record LibraryEntry {
     [JsonPropertyName("size")] public long? Size { get; set; }
-    [JsonPropertyName("sha1")] public string Sha1 { get; set; }
+    [JsonPropertyName("sha1")] public Sha1Data? Sha1 { get; set; }
     [JsonPropertyName("url")] public string MavenUrl { get; set; }
     [JsonPropertyName("clientreq")] public bool? ClientRequest { get; set; }
     [JsonPropertyName("serverreq")] public bool? ServerRequest { get; set; }
@@ -560,17 +613,17 @@ public record LibraryEntry {
     public string MavenName { get; set; }
 }
 
-public record DownloadInformationEntry {
+public sealed record DownloadInformationEntry {
     [JsonPropertyName("artifact")] public DownloadArtifactEntry Artifact { get; set; }
     [JsonPropertyName("classifiers")] public Dictionary<string, DownloadArtifactEntry> Classifiers { get; set; }
 }
 
-public record RuleEntry {
+public sealed record RuleEntry {
     [JsonPropertyName("os")] public Os System { get; set; }
     [JsonPropertyName("action")] public string Action { get; set; }
 }
 
-public record Os {
+public sealed record Os {
     [JsonPropertyName("name")] public string Name { get; set; }
     [JsonPropertyName("arch")] public string Arch { get; set; }
     [JsonPropertyName("version")] public string Version { get; set; }
@@ -581,7 +634,7 @@ public class ForgeLibrary(string mavenName) : MinecraftLibrary(mavenName), IDown
 
     public required long? Size { get; init; }
     public required string Url { get; init; }
-    public required string Sha1 { get; init; }
+    public required Sha1Data? Sha1 { get; init; }
 }
 
 public sealed class VanillaLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
@@ -589,7 +642,7 @@ public sealed class VanillaLibrary(string mavenName) : MinecraftLibrary(mavenNam
     long? IVerifiableDependency.Size => Size;
 
     public required long? Size { get; init; }
-    public required string Sha1 { get; init; }
+    public required Sha1Data? Sha1 { get; init; }
     // 值是不变的,添加缓存
     public string Url => _url ??= $"https://libraries.minecraft.net/{GetLibraryPath().Replace('\\', '/')}";
 }
@@ -610,21 +663,21 @@ public sealed class FabricLibrary(string mavenName) : MinecraftLibrary(mavenName
     long? IVerifiableDependency.Size => Size;
 
     public long? Size { get; set; }
-    public string Sha1 { get; set; }
+    public Sha1Data? Sha1 { get; set; }
     // 添加缓存
     public string Url => _url ??=$"https://maven.fabricmc.net/{GetLibraryPath().Replace('\\', '/')}";
 }
 
-public class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
+public sealed class QuiltLibrary(string mavenName) : MinecraftLibrary(mavenName), IDownloadDependency, IVerifiableDependency {
     private string _url;
     long? IVerifiableDependency.Size => Size;
 
     public long? Size { get; set; }
-    public string Sha1 { get; set; }
+    public Sha1Data? Sha1 { get; set; }
     public string Url => _url ??= $"https://maven.quiltmc.org/repository/release/{GetLibraryPath().Replace('\\', '/')}";
 }
 
-public class DownloadableDependency(string mavenName, string url) : MinecraftLibrary(mavenName), IDownloadDependency {
+public sealed class DownloadableDependency(string mavenName, string url) : MinecraftLibrary(mavenName), IDownloadDependency {
     long? IDownloadDependency.Size => throw new NotSupportedException();
 
     public string Url { get; init; } = url;
@@ -632,9 +685,9 @@ public class DownloadableDependency(string mavenName, string url) : MinecraftLib
 
 public sealed class UnknownLibrary(string mavenName) : MinecraftLibrary(mavenName);
 
-public record AssetJsonEntry {
+public sealed record AssetJsonEntry {
     [JsonPropertyName("size")] public int Size { get; set; }
-    [JsonPropertyName("hash")] public string Hash { get; set; }
+    [JsonPropertyName("hash")] public Sha1Data Hash { get; set; }
 }
 
 [JsonSerializable(typeof(IEnumerable<LibraryEntry>))]

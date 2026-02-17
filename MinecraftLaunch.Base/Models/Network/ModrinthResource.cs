@@ -1,6 +1,6 @@
 using MinecraftLaunch.Base.Enums;
 using MinecraftLaunch.Base.Interfaces;
-using System;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
@@ -31,7 +31,7 @@ public record ModrinthResourceFile {
 
     public FileReleaseType ReleaseType { get; init; }
 
-    public required string Sha1 { get; init; }
+    public required Sha1Data Sha1 { get; init; }
     public required string Sha512 { get; init; }
     public required string FileName { get; init; }
     public required string DownloadUrl { get; init; }

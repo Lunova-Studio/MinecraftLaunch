@@ -9,6 +9,7 @@ using MinecraftLaunch.Utilities;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Components.Provider;
 
@@ -235,7 +236,7 @@ public sealed class ModrinthProvider {
             IsPrimary = primaryFileNode.GetProperty("primary"u8).GetBoolean(),
             FileName = primaryFileNode.GetProperty("filename"u8).GetString(),
             FileSize = primaryFileNode.GetProperty("size"u8).GetInt64(),
-            Sha1 = primaryFileNode.GetProperty("hashes"u8).GetProperty("sha1"u8).GetString(),
+            Sha1 = primaryFileNode.GetProperty("hashes"u8).GetProperty("sha1"u8).Deserialize(Sha1Data.Sha1DataSerializerContext.Default.Sha1Data),
             Sha512 = primaryFileNode.GetProperty("hashes"u8).GetProperty("sha512"u8).GetString(),
 
             ReleaseType = node.GetProperty("version_type"u8).GetString() switch

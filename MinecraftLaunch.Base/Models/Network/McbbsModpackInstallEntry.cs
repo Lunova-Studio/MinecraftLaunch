@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Base.Models.Network;
 
@@ -20,7 +21,7 @@ public record McbbsModpackAddons {
 
 public record McbbsModpackFileEntry {
     [JsonPropertyName("path")] public string Path { get; set; }
-    [JsonPropertyName("hash")] public string Hash { get; set; }
+    [JsonPropertyName("hash")] public Sha1Data? Hash { get; set; }
     [JsonPropertyName("type")] public string Type { get; set; }
     [JsonPropertyName("force")] public bool IsForce { get; set; }
 }

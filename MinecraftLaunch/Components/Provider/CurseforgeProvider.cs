@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Flurl;
 using Flurl.Http;
 using MinecraftLaunch.Base.Enums;
@@ -7,9 +6,9 @@ using MinecraftLaunch.Extensions;
 using MinecraftLaunch.Utilities;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Web;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Components.Provider;
 
@@ -294,14 +293,16 @@ public sealed class CurseforgeProvider {
                     x => (DependencyType)x.GetProperty("relationType"u8).GetInt32()
                 );
         }
-        static string ProvideSha(JsonElement hashesArrayNode)
+        static Sha1Data? ProvideSha(JsonElement hashesArrayNode)
         {
             foreach (var node in hashesArrayNode.EnumerateArray())
             {
+                
                 if (!node.TryGetProperty("algo"u8,out var algoElement))continue;
-                if (algoElement.GetInt32() is 1) return node.GetProperty("value"u8).GetString();
+                if (algoElement.GetInt32() is 1) return node.GetProperty("value"u8).Deserialize(Sha1Data.Sha1DataSerializerContext.Default.Sha1Data);
             }
-            return string.Empty;
+
+            return null;
         }
     }
 

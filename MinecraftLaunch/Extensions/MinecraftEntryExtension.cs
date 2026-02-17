@@ -3,6 +3,7 @@ using MinecraftLaunch.Base.Models.Game;
 using MinecraftLaunch.Base.Utilities;
 using System.IO.Compression;
 using System.Text.Json;
+using MinecraftLaunch.Base.Models.SHA1;
 
 namespace MinecraftLaunch.Extensions;
 
@@ -56,7 +57,7 @@ public static class MinecraftEntryExtension {
 
         long size = clientArtifactNode.GetProperty("size"u8).GetInt64();
         string url = clientArtifactNode.GetProperty("url"u8).GetString();
-        string sha1 = clientArtifactNode.GetProperty("sha1"u8).GetString();
+        var sha1 = clientArtifactNode.GetPropertyNullable("sha1"u8)?.Deserialize(Sha1Data.Sha1DataSerializerContext.Default.Sha1Data);
 
         if (sha1 is null || url is null)
             throw new InvalidDataException("Invalid client info");
@@ -65,7 +66,7 @@ public static class MinecraftEntryExtension {
             MinecraftFolderPath = entry.MinecraftFolderPath,
             ClientId = Path.GetFileNameWithoutExtension(clientJarPath),
             Url = url,
-            Sha1 = sha1,
+            Sha1 = sha1.Value,
             Size = size
         };
     }
@@ -86,7 +87,7 @@ public static class MinecraftEntryExtension {
         long size = assetIndex.GetProperty("size"u8).GetInt64();
         string id = assetIndex.GetProperty("id"u8).GetString() ?? throw new InvalidDataException();
         string url = assetIndex.GetProperty("url"u8).GetString() ?? throw new InvalidDataException();
-        string sha1 = assetIndex.GetProperty("sha1"u8).GetString() ?? throw new InvalidDataException();
+        var sha1 = assetIndex.GetPropertyNullable("sha1"u8)?.Deserialize(Sha1Data.Sha1DataSerializerContext.Default.Sha1Data) ?? throw new InvalidDataException();
 
         return new AssstIndex {
             Id = id,
