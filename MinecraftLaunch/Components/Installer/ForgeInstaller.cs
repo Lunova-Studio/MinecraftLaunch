@@ -67,8 +67,8 @@ public sealed class ForgeInstaller : InstallerBase {
         {
             ReportProgress(InstallStep.Interrupted, 1.0d, TaskStatus.Canceled, 1, 1);
             ReportCompleted(false, ex);
+            throw;
         }
-
         return entry ?? throw new ArgumentNullException(nameof(entry), "Unexpected null reference to variable");
     }
 
@@ -131,9 +131,9 @@ public sealed class ForgeInstaller : InstallerBase {
         var packageFile = new FileInfo(Path.Combine(MinecraftFolder, fileName));
         var downloadRequest = new DownloadRequest(packageUrl, packageFile.FullName);
 
-        await new DefaultDownloader()
+        var downloadResult = await new DefaultDownloader()
             .DownloadAsync(downloadRequest, cancellationToken);
-
+        if (downloadResult.Type is DownloadResultType.Failed) throw downloadResult.Exception;
         ReportProgress(InstallStep.DownloadPackage, 0.45d, TaskStatus.Running, 1, 1);
 
         return packageFile;
