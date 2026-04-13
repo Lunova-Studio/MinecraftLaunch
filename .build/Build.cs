@@ -4,13 +4,12 @@ using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Components;
-
-using static Nuke.Common.Tools.NuGet.NuGetTasks;
-using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using System.Collections.Generic;
 using Serilog;
-using Nuke.Common.CI;
 using Nuke.Common.Tooling;
+using Nuke.Common.Tools.NuGet;
+
+using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 [GitHubActions("ci_build",
     GitHubActionsImage.UbuntuLatest,
@@ -32,8 +31,11 @@ class Build : NukeBuild, IHazSolution, ITest, IPack, ICompile, IRestore, IPublis
 
     Nuke.Common.ProjectModel.Solution IHazSolution.Solution => Solution;
 
-    AbsolutePath IPack.PackagesDirectory => RootDirectory;
-    
+    AbsolutePath IPack.PackagesDirectory => _output;
+
+    Configure<DotNetNuGetPushSettings> IPublish.PushSettings => _ => _
+        .EnableSkipDuplicate();
+
     public IEnumerable<Project> TestProjects => Solution.AllProjects;
 
     public static int Main() => Execute<Build>(x => ((IPack)x).Pack);
