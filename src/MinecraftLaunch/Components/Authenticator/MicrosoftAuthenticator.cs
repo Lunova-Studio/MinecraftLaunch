@@ -200,7 +200,11 @@ public sealed class MicrosoftAuthenticator {
         {
             using var profileNode = await JsonDocument.ParseAsync(await profileRes.GetStreamAsync(),
                 cancellationToken: cancellationToken);
-            return new MicrosoftAccount(profileNode.RootElement.GetProperty("name"u8).GetString(), profileNode.RootElement.GetProperty("id"u8).GetGuid(), accessToken, refreshToken, DateTime.Now);
+            string idStr = profileNode.RootElement.GetProperty("id"u8).GetString() ?? string.Empty;
+        
+            // 关键修复：使用 ParseExact 解析不带连字符的 Guid (格式 "N")
+            Guid id = Guid.ParseExact(idStr, "N");
+            return new MicrosoftAccount(profileNode.RootElement.GetProperty("name"u8).GetString(), id, accessToken, refreshToken, DateTime.Now);
         }
         catch (Exception e)
         {
