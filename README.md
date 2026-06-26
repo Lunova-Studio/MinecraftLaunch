@@ -72,7 +72,7 @@ dotnet add package MinecraftLaunch --version 3.0.0
 
 现在，MinecraftLaunch的改动几乎使得 Xilu Blog 里的教程无法在新版 MinecraftLaunch 上使用，所以你可能无法从旧文档得到较多帮助.
 
-不过，我们准备好了[新文档](https://docs.lunova.studio/)！
+不过，我们准备好了[新文档](https://lunova-studio.github.io/)！
 
 
 
